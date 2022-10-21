@@ -20,19 +20,21 @@
     var CONFIG = {"hostname":"example.com","root":"/","scheme":"Muse","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}};
   </script>
 
-  <meta name="description" content="Welcome to Hexo! This is your very first post. Check documentation for more info. If you get any problems when using Hexo, you can find the answer in troubleshooting or you can ask me on GitHub. Quick">
+  <meta name="description" content="需求： 实现文件过期自动删除。  大致思路： 1、获取文件time 2、跟当前时间做比较 3、删除  知识点：获取文件time方法？ linux可以通过stat方法查看文件的时间，但是会发现有三个时间  ctime&#x3D;change time   最后一次访问时间                                          比如：cat touch atime&#x3D;access ti">
 <meta property="og:type" content="article">
-<meta property="og:title" content="Hello World">
-<meta property="og:url" content="http://example.com/1970/01/01/hello-world/index.html">
+<meta property="og:title" content="文件过期自动删除">
+<meta property="og:url" content="http://example.com/2022/10/21/expired/index.html">
 <meta property="og:site_name" content="cloud-fei">
-<meta property="og:description" content="Welcome to Hexo! This is your very first post. Check documentation for more info. If you get any problems when using Hexo, you can find the answer in troubleshooting or you can ask me on GitHub. Quick">
+<meta property="og:description" content="需求： 实现文件过期自动删除。  大致思路： 1、获取文件time 2、跟当前时间做比较 3、删除  知识点：获取文件time方法？ linux可以通过stat方法查看文件的时间，但是会发现有三个时间  ctime&#x3D;change time   最后一次访问时间                                          比如：cat touch atime&#x3D;access ti">
 <meta property="og:locale" content="zh_CN">
-<meta property="article:published_time" content="1970-01-01T00:00:00.000Z">
-<meta property="article:modified_time" content="2022-09-27T03:25:01.437Z">
+<meta property="og:image" content="http://example.com/2022/10/21/expired/expired/stat_time.png">
+<meta property="article:published_time" content="2022-10-21T05:59:28.000Z">
+<meta property="article:modified_time" content="2022-10-21T06:06:27.687Z">
 <meta property="article:author" content="cloud-fei">
 <meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http://example.com/2022/10/21/expired/expired/stat_time.png">
 
-<link rel="canonical" href="http://example.com/1970/01/01/hello-world/">
+<link rel="canonical" href="http://example.com/2022/10/21/expired/">
 
 
 <script id="page-configurations">
@@ -45,7 +47,7 @@
   };
 </script>
 
-  <title>Hello World | cloud-fei</title>
+  <title>文件过期自动删除 | cloud-fei</title>
   
 
 
@@ -150,7 +152,7 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="http://example.com/1970/01/01/hello-world/">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2022/10/21/expired/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="image" content="/images/avatar.gif">
@@ -163,7 +165,7 @@
     </span>
       <header class="post-header">
         <h1 class="post-title" itemprop="name headline">
-          Hello World
+          文件过期自动删除
         </h1>
 
         <div class="post-meta">
@@ -172,16 +174,10 @@
                 <i class="far fa-calendar"></i>
               </span>
               <span class="post-meta-item-text">发表于</span>
+              
 
-              <time title="创建时间：1970-01-01 08:00:00" itemprop="dateCreated datePublished" datetime="1970-01-01T08:00:00+08:00">1970-01-01</time>
+              <time title="创建时间：2022-10-21 13:59:28 / 修改时间：14:06:27" itemprop="dateCreated datePublished" datetime="2022-10-21T13:59:28+08:00">2022-10-21</time>
             </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="far fa-calendar-check"></i>
-                </span>
-                <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2022-09-27 11:25:01" itemprop="dateModified" datetime="2022-09-27T11:25:01+08:00">2022-09-27</time>
-              </span>
 
           
 
@@ -194,19 +190,37 @@
     <div class="post-body" itemprop="articleBody">
 
       
-        <p>Welcome to <a target="_blank" rel="noopener" href="https://hexo.io/">Hexo</a>! This is your very first post. Check <a target="_blank" rel="noopener" href="https://hexo.io/docs/">documentation</a> for more info. If you get any problems when using Hexo, you can find the answer in <a target="_blank" rel="noopener" href="https://hexo.io/docs/troubleshooting.html">troubleshooting</a> or you can ask me on <a target="_blank" rel="noopener" href="https://github.com/hexojs/hexo/issues">GitHub</a>.</p>
-<h2 id="Quick-Start"><a href="#Quick-Start" class="headerlink" title="Quick Start"></a>Quick Start</h2><h3 id="Create-a-new-post"><a href="#Create-a-new-post" class="headerlink" title="Create a new post"></a>Create a new post</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">$ hexo new <span class="string">&quot;My New Post&quot;</span></span><br></pre></td></tr></table></figure>
+        <h2 id="需求："><a href="#需求：" class="headerlink" title="需求："></a>需求：</h2><blockquote>
+<p>实现文件过期自动删除。</p>
+</blockquote>
+<h2 id="大致思路："><a href="#大致思路：" class="headerlink" title="大致思路："></a>大致思路：</h2><blockquote>
+<p>1、获取文件time</p>
+<p>2、跟当前时间做比较</p>
+<p>3、删除</p>
+</blockquote>
+<h3 id="知识点："><a href="#知识点：" class="headerlink" title="知识点："></a>知识点：</h3><p><strong>获取文件time方法？</strong></p>
+<p>linux可以通过stat方法查看文件的时间，但是会发现有三个时间</p>
+<blockquote>
+<p><strong>ctime</strong>=change time   最后一次访问时间                                          比如：cat touch</p>
+<p><strong>atime</strong>=access time   最近一次文件内容发生改变时间                     比如：vim</p>
+<p><strong>mtime</strong>=modifiy time  文件状态修改时间，文件属性                         比如： chmod chown  ln</p>
+</blockquote>
+<p><img src="./expired/stat_time.png"></p>
+<p>之后根据需求看想用哪个时间作为删除的时间就可以了。</p>
+<p>这样实现看起来好像没什么问题，但是如果在获取到文件时间之后，用户修改了文件（文件时间发生了改变），该不该删除呢？</p>
+<p>所以要保证获取文件时间到删除之前原子性操作！</p>
+<p>加文件锁？文加锁是建议性锁，并不能影响用户操作和修改文件。X</p>
+<p>之后考虑的是在获取文件time之前，先把文件操作权限抹去，这样在获取文件time到删除文件，用户没办法操作文件，看起来可行，试试看。如果文件没有过期或者删除失败的时候，我们还需要把文件权限恢复。</p>
+<p>这时可以使用stat函数，将文件各种信息存下来</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">struct stat statbuf;</span><br><span class="line">int ret = stat(path, &amp;statbuf); //返回0表示成功</span><br></pre></td></tr></table></figure>
 
-<p>More info: <a target="_blank" rel="noopener" href="https://hexo.io/docs/writing.html">Writing</a></p>
-<h3 id="Run-server"><a href="#Run-server" class="headerlink" title="Run server"></a>Run server</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">$ hexo server</span><br></pre></td></tr></table></figure>
+<p>想要恢复权限：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">int ret = chmod(path,0);</span><br></pre></td></tr></table></figure>
 
-<p>More info: <a target="_blank" rel="noopener" href="https://hexo.io/docs/server.html">Server</a></p>
-<h3 id="Generate-static-files"><a href="#Generate-static-files" class="headerlink" title="Generate static files"></a>Generate static files</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">$ hexo generate</span><br></pre></td></tr></table></figure>
-
-<p>More info: <a target="_blank" rel="noopener" href="https://hexo.io/docs/generating.html">Generating</a></p>
-<h3 id="Deploy-to-remote-sites"><a href="#Deploy-to-remote-sites" class="headerlink" title="Deploy to remote sites"></a>Deploy to remote sites</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">$ hexo deploy</span><br></pre></td></tr></table></figure>
-
-<p>More info: <a target="_blank" rel="noopener" href="https://hexo.io/docs/one-command-deployment.html">Deployment</a></p>
+<p>至此，已经可以满足需求。</p>
+<p>补充：</p>
+<p>在修改权限部分，使用chmod函数虽然会将文件权限恢复，但是会修改文件的ctime，那么有什么方法可以将文件的ctime也修改回去呢？</p>
+<p>目前查看了一些资料，得出的结论是使用外部api接口函数，文件的ctime都会随之改变，继续探讨。。。</p>
 
     </div>
 
@@ -221,11 +235,11 @@
 
         
     <div class="post-nav">
-      <div class="post-nav-item"></div>
       <div class="post-nav-item">
-    <a href="/2022/10/21/expired/" rel="next" title="文件过期自动删除">
-      文件过期自动删除 <i class="fa fa-chevron-right"></i>
+    <a href="/1970/01/01/hello-world/" rel="prev" title="Hello World">
+      <i class="fa fa-chevron-left"></i> Hello World
     </a></div>
+      <div class="post-nav-item"></div>
     </div>
       </footer>
     
@@ -284,7 +298,7 @@
 
       <!--noindex-->
       <div class="post-toc-wrap sidebar-panel">
-          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#Quick-Start"><span class="nav-number">1.</span> <span class="nav-text">Quick Start</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#Create-a-new-post"><span class="nav-number">1.1.</span> <span class="nav-text">Create a new post</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Run-server"><span class="nav-number">1.2.</span> <span class="nav-text">Run server</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Generate-static-files"><span class="nav-number">1.3.</span> <span class="nav-text">Generate static files</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Deploy-to-remote-sites"><span class="nav-number">1.4.</span> <span class="nav-text">Deploy to remote sites</span></a></li></ol></li></ol></div>
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E9%9C%80%E6%B1%82%EF%BC%9A"><span class="nav-number">1.</span> <span class="nav-text">需求：</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%A4%A7%E8%87%B4%E6%80%9D%E8%B7%AF%EF%BC%9A"><span class="nav-number">2.</span> <span class="nav-text">大致思路：</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E7%9F%A5%E8%AF%86%E7%82%B9%EF%BC%9A"><span class="nav-number">2.1.</span> <span class="nav-text">知识点：</span></a></li></ol></li></ol></div>
       </div>
       <!--/noindex-->
 
