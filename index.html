@@ -1,18 +1,18 @@
 
 <!DOCTYPE html>
-<html lang="en ">
+<html lang="zh ">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>cloud-fei的个人博客 || </title>
+    <title>cloud-fei || </title>
     <meta name="author" content="cloud-fei">
     <meta name="description" content=" ">
     <meta name="keywords" content=" ">
     <link rel="icon" href="/rome.jpg">
     <link rel="stylesheet" href="/css/antd.min.css">
     
-    <link rel="stylesheet" href="/css/maiden-theme.css">
+    <link rel="stylesheet" href="/css/full-theme.css">
     
     <script src="/js/vue.js"></script>
     <script src="/js/antd.min.js"></script>
@@ -47,42 +47,42 @@
 <nav id="menu">
     <div class="desktop-menu">
         <a href="/">
-            <span class="title">cloud-fei的个人博客</span>
+            <span class="title">cloud-fei</span>
         </a>
         
         <a href="/">
             <span>
-                <a-icon type="home" theme="filled" />
+                <a-icon type="主页" theme="filled" />
             </span>
-            <span>home</span>
+            <span>主页</span>
         </a>
         
         <a href="/about">
             <span>
                 <a-icon type="idcard" theme="filled" />
             </span>
-            <span>about</span>
+            <span>关于</span>
         </a>
         
         <a href="/archives">
             <span>
                 <a-icon type="folder" theme="filled" />
             </span>
-            <span>archives</span>
+            <span>文章</span>
         </a>
         
         <a href="/like/categories">
             <span>
                 <a-icon type="book" theme="filled" />
             </span>
-            <span>categories</span>
+            <span>类别</span>
         </a>
         
         <a href="/like/tags">
             <span>
-                <a-icon type="tags" theme="filled" />
+                <a-icon type="标签" theme="filled" />
             </span>
-            <span>tags</span>
+            <span>标签</span>
         </a>
         
     </div>
@@ -92,16 +92,16 @@
             <span style="margin-right: 10px;">
                 <a-icon type="appstore" theme="filled" />
             </span>
-            <span>cloud-fei的个人博客</span>
+            <span>cloud-fei</span>
         </div>
         <div class="items" v-show="menu_show">
             
             <a href="/">
                 <div class="item">
                     <div style="min-width:20px; max-width:50px; width: 10%">
-                        <a-icon type="home" theme="filled" />
+                        <a-icon type="主页" theme="filled" />
                     </div>
-                    <div style="min-width:100px;max-width: 150%;width: 20%;">home</div>
+                    <div style="min-width:100px;max-width: 150%;width: 20%;">主页</div>
                 </div>
             </a>
             
@@ -110,7 +110,7 @@
                     <div style="min-width:20px; max-width:50px; width: 10%">
                         <a-icon type="idcard" theme="filled" />
                     </div>
-                    <div style="min-width:100px;max-width: 150%;width: 20%;">about</div>
+                    <div style="min-width:100px;max-width: 150%;width: 20%;">关于</div>
                 </div>
             </a>
             
@@ -119,7 +119,7 @@
                     <div style="min-width:20px; max-width:50px; width: 10%">
                         <a-icon type="folder" theme="filled" />
                     </div>
-                    <div style="min-width:100px;max-width: 150%;width: 20%;">archives</div>
+                    <div style="min-width:100px;max-width: 150%;width: 20%;">文章</div>
                 </div>
             </a>
             
@@ -128,16 +128,16 @@
                     <div style="min-width:20px; max-width:50px; width: 10%">
                         <a-icon type="book" theme="filled" />
                     </div>
-                    <div style="min-width:100px;max-width: 150%;width: 20%;">categories</div>
+                    <div style="min-width:100px;max-width: 150%;width: 20%;">类别</div>
                 </div>
             </a>
             
             <a href="/like/tags">
                 <div class="item">
                     <div style="min-width:20px; max-width:50px; width: 10%">
-                        <a-icon type="tags" theme="filled" />
+                        <a-icon type="标签" theme="filled" />
                     </div>
-                    <div style="min-width:100px;max-width: 150%;width: 20%;">tags</div>
+                    <div style="min-width:100px;max-width: 150%;width: 20%;">标签</div>
                 </div>
             </a>
             
@@ -162,7 +162,7 @@
         <span class="loop"></span>
         <span class="info">
             <div class="wrap">
-                <h1>cloud-fei的个人博客</h1>
+                <h1>cloud-fei</h1>
                 <h3></h3>
                 <h5></h5>
             </div>
@@ -178,6 +178,62 @@
 
         <div id="posts">
             
+
+<div class="post">
+
+    <a href="/2023/06/02/使用ipv6部署ceph集群/">
+        <h2>
+            使用ipv6部署ceph集群
+        </h2>
+    </a>
+
+    <div class="category-and-date">
+
+        
+
+        <span class="date">
+            <span class="icon">
+                <a-icon type="calendar" theme="filled" />
+            </span>
+            2023/6/2
+        </span>
+
+    </div>
+
+    <div class="excerpt">
+        <div class="content" v-pre>
+            
+            
+            <p>使用 <strong>ipv6</strong> 部署 <strong>ceph</strong> 多节点集群</p>
+<p>ceph.conf 配置文件如下：</p>
+<pre><code>public_network = 2001::0/64
+cluster_network = 2001::0/64
+ms_bind_ipv6 = true
+</code></pre>
+<p>在进行osd创建时无报错，创建好之后发现全部down掉了，且 <code>osd tree</code> 显示无host分组，查看日志发现：</p>
+<pre><code>unable to find any IPv4 address in networks &#39;2001::0/64&#39; interfaces &#39;&#39;
+Failed to pick public address.
+</code></pre>
+<p><strong>osd默认找的是 ipv4 地址</strong>，可是配置文件已经指定ipv6了，不明所以</p>
+<p>最终查找相关文档，<strong>不仅需要指定ipv6，同时还要屏蔽ipv4</strong></p>
+<p>配置文件中需要添加以下：</p>
+<pre><code>ms_bind_ipv4 = false
+</code></pre>
+<p>至此恢复正常了！</p>
+
+            
+        </div>
+    </div>
+
+    <div class="post-tags">
+        
+        
+    </div>
+
+    <a href="/2023/06/02/使用ipv6部署ceph集群/ " class="go-post">
+        阅读全文
+    </a>
+</div>
 
 <div class="post">
 
@@ -305,7 +361,7 @@
 <footer id="footer">
     <div class="footer-wrap">
         <div>
-            © 2023 - 2023 cloud-fei的个人博客
+            © 2023 - 2023 cloud-fei
             <span class="footer-icon">
                 <a-icon type="flag" theme="filled" /></span>
             @cloud-fei

@@ -5,7 +5,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>cloud-fei || </title>
+    <title>cloud-fei || 使用ipv6部署ceph集群</title>
     <meta name="author" content="cloud-fei">
     <meta name="description" content=" ">
     <meta name="keywords" content=" ">
@@ -149,43 +149,53 @@
                 </div>
 
                 <div id="main">
-                    
-<div id="archives">
-    
-    <a-timeline>
-        <a-timeline-item timestamp="2023/6/2" placement="top" color="#a5c2f5">
-            <a-card hoverable>
-                <div class="item-time">2023/6/2</div>
-                <a href="/2023/06/02/使用ipv6部署ceph集群/">
-                    <h3>使用ipv6部署ceph集群</h3>
-                </a>
-                <div class="info">
-                    
+                     
+<link rel="stylesheet" href="/css/post-body.css">
+<div class="article">
+    <div>
+        <h1>使用ipv6部署ceph集群 </h1>
+    </div>
+    <div class="info">
+        <span class="date">
+            <span class="icon">
+                <a-icon type="calendar" theme="filled" />
+            </span>
+            2023/6/2
+        </span>
 
-                    
-                </div>
-            </a-card>
-        </a-timeline-item>
-    </a-timeline>
-    
-    <a-timeline>
-        <a-timeline-item timestamp="2023/6/2" placement="top" color="#a5c2f5">
-            <a-card hoverable>
-                <div class="item-time">2023/6/2</div>
-                <a href="/2023/06/02/ohh/">
-                    <h3>ohh</h3>
-                </a>
-                <div class="info">
-                    
+        
 
-                    
-                </div>
-            </a-card>
-        </a-timeline-item>
-    </a-timeline>
+        
+    </div>
+
+    <div class="content" v-pre>
+        <p>使用 <strong>ipv6</strong> 部署 <strong>ceph</strong> 多节点集群</p>
+<p>ceph.conf 配置文件如下：</p>
+<pre><code>public_network = 2001::0/64
+cluster_network = 2001::0/64
+ms_bind_ipv6 = true
+</code></pre>
+<p>在进行osd创建时无报错，创建好之后发现全部down掉了，且 <code>osd tree</code> 显示无host分组，查看日志发现：</p>
+<pre><code>unable to find any IPv4 address in networks &#39;2001::0/64&#39; interfaces &#39;&#39;
+Failed to pick public address.
+</code></pre>
+<p><strong>osd默认找的是 ipv4 地址</strong>，可是配置文件已经指定ipv6了，不明所以</p>
+<p>最终查找相关文档，<strong>不仅需要指定ipv6，同时还要屏蔽ipv4</strong></p>
+<p>配置文件中需要添加以下：</p>
+<pre><code>ms_bind_ipv4 = false
+</code></pre>
+<p>至此恢复正常了！</p>
+
+    </div>
+
+    
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.css">
+    <div id="comment">
+        <div id="gitalk-container">
+        </div>
+    </div>
     
 </div>
-
                      
 <footer id="footer">
     <div class="footer-wrap">
@@ -248,6 +258,21 @@
             }
         }
     })
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js"></script>
+<script>
+    const gitalk = new Gitalk({
+        clientID: '',
+        clientSecret: '',
+        repo: 'hexo-theme-particle',      // The repository of store comments,
+        owner: 'korilin',
+        admin: ['korilin'],
+        language: 'en',
+        id: location.pathname,      // Ensure uniqueness and length less than 50
+        distractionFreeMode: true  // Facebook-like distraction free mode
+    })
+    gitalk.render('gitalk-container')
 </script>
 
 </body>
