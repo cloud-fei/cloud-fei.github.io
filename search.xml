@@ -1,0 +1,468 @@
+<?xml version="1.0" encoding="utf-8"?>
+<search>
+  <entry>
+    <title>Linux网络流量问题排查-UDP丢包</title>
+    <url>/2023/06/05/Linux%E7%BD%91%E7%BB%9C%E6%B5%81%E9%87%8F%E9%97%AE%E9%A2%98%E6%8E%92%E6%9F%A5-UDP%E4%B8%A2%E5%8C%85/</url>
+    <content><![CDATA[<p><em>一直以来对Linux网络这部分了解比较少，解决问题总是没有条理</em></p>
+<p>遇到一个<strong>UDP丢包</strong>的问题：在测试中，一台VM虚拟机，CPU利用率55%左右，内存利用率7%左右，网卡流量也远没到限制的时候出现了丢包情况**</p>
+<p><strong>验证</strong>：<code>netstat -su|grep &quot;packet receive errors&quot;|awk &#39;&#123;print $1&#125;&#39;</code>  ，每30s查看一次，计算这次和上次之间的数值差值发现存在UDP丢包现象。</p>
+<p>首先要看问题出现在哪儿，网络流量的路径是怎样的？</p>
+<span id="more"></span>
+
+<ul>
+<li><p>1、网络流量通过有线&#x2F;无线发送到网卡</p>
+</li>
+<li><p>2、网卡驱动读取报文放到ring buffer（此时调用DMA，不经过CPU）</p>
+</li>
+<li><p>3、内核从ring buffer中读取报文进行处理，执行IP层，TCP&#x2F;UDP层逻辑</p>
+</li>
+<li><p>4、把报文发到用户态的socket buffer中，应用程序读取socket buffer并进行处理</p>
+</li>
+</ul>
+<p>可能出现问题的地方：1、网卡处理时丢包   2、内核处理时丢包   3、应用程序处理时</p>
+<blockquote>
+<p>1、网卡阶段：</p>
+</blockquote>
+<p>两种方法：</p>
+<p>(1).  <code>ifconfig</code> 查看 <strong>RX errors dropped</strong></p>
+<p>(2).  <code>ethtool -S eth0 |egrep &quot;err|drop&quot;</code></p>
+<p>如果存在丢包，可以查看网卡的ring buffer size是否设置太小达到瓶颈，使用<code>ethtool -g eth0</code>查看最大值和当前值，使用<code>ethtool -G eth0 rx 1024</code>进行修改</p>
+<p>如果网卡方面没问题，那么尝试内核方面查看</p>
+<blockquote>
+<p>2、内核阶段</p>
+</blockquote>
+<p>linux 系统在接收报文之后，会把报文保存到缓存区中。因为缓存区的大小是有限的，如果出现 UDP 报文过大(超过缓存区大小或者 MTU 大小)、接收到报文的速率太快，都可能导致 linux 因为缓存满而直接丢包的情况。</p>
+<p>使用<code>sysctl -a |grep net.core</code>查看相关参数设置</p>
+<p>重点看这几个参数：</p>
+<p><strong>&#x2F;proc&#x2F;sys&#x2F;net&#x2F;core&#x2F;rmem_max</strong>：允许设置的 receive buffer 最大值</p>
+<p><strong>&#x2F;proc&#x2F;sys&#x2F;net&#x2F;core&#x2F;rmem_default</strong>：默认使用的 receive buffer 值</p>
+<p><strong>&#x2F;proc&#x2F;sys&#x2F;net&#x2F;core&#x2F;wmem_max</strong>：允许设置的 send buffer 最大值</p>
+<p><strong>&#x2F;proc&#x2F;sys&#x2F;net&#x2F;core&#x2F;wmem_dafault</strong>：默认使用的 send buffer 最大值</p>
+<p>但是这些初始值并不是为了应对大流量的 UDP 报文，如果应用程序接收和发送 UDP 报文非常多，把这个值调大。</p>
+<p>如果发现某些参数设置不合理需要修改的话：</p>
+<p><strong>方法一</strong>：使用 sysctl 命令让它立即生效</p>
+<p>接收最大值设置 sysctl -w net.core.rmem_max&#x3D;56214400 # 设置为 50M</p>
+<p>接收默认值设置 sysctl -w net.core.rmem_default&#x3D;26214400 # 设置为 25M</p>
+<p>发送最大值 sysctl -w net.core.wmem_max&#x3D;26214400 # 设置为 25M</p>
+<p>发送默认值 sysctl -w net.core.wmem_default&#x3D;26214400 # 设置为 25M</p>
+<p><strong>方法二</strong>：修改对应路径文件的参数或者修改 &#x2F;etc&#x2F;sysctl.conf 中对应的参数在下次启动时让参数保持生效（sysctl -p  生效）</p>
+<blockquote>
+<p>3、应用阶段</p>
+</blockquote>
+<p>系统的 UDP buffer size，调节的 sysctl 参数只是系统允许的最大值，每个应用程序在创建 socket 时需要设置自己 socket buffer size 的值。linux 系统会把接受到的报文放到 socket 的 buffer 中，应用程序从 buffer 中不断地读取报文。</p>
+<p>另外一个因素是应用读取 buffer 中报文的速度，对于应用程序来说，处理报文应该采取异步的方式。</p>
+<p>其他可能原因：</p>
+<p>检查防火墙状态 <code>systemctl status firewalld</code>，或者 <code>iptables</code> 阻断了部分流量？</p>
+<p>要处理的实际业务中，每一个连接会占用一个句柄，测试有反馈有 <em>“Too many open files”</em> 的错误。这可能导致数据丢失而没有正确执行实际业务。</p>
+<p>陆续学习和更新</p>
+<p><a href="https://blog.csdn.net/weixin_40754332/article/details/106924810">参考链接：数据传输过程中丢包分析处理</a><em>（如有侵权请联系删除）</em>：</p>
+<p>此外补充下小工具的使用</p>
+<ul>
+<li>netstat   主要是用于列出系统上所有的网络套接字连接情况，包括 tcp, udp 以及 unix 套接字，另外它还能列出处于监听状态（即等待接入请求）的套接字。</li>
+</ul>
+<p><strong>-a</strong>      显示所有连接</p>
+<p><strong>-t</strong>      TCP连接</p>
+<p><strong>-u</strong>      UDP连接</p>
+<p><strong>-l</strong>       列出所有处于监听状态的 Sockets</p>
+<p><strong>-s</strong>      显示所有端口的统计信息，可配合-u&#x2F;-t使用</p>
+<p><strong>Recv-Q</strong> 表示收到的数据已经在本地接收缓冲，但是还有多少没有被进程取走</p>
+<p><strong>send-Q</strong> 表示本地待发送的数据</p>
+<p>这两个值通常应该为0，如果不为0可能是有问题的。packets在两个队列里都不应该有堆积状态。可接受短暂的非0情况。</p>
+<p><a href="https://blog.csdn.net/wangquan1992/article/details/109508822">参考链接：netstat 命令详解及实现原理</a></p>
+<ul>
+<li>ethtool</li>
+</ul>
+<p><strong>ethtool eth0</strong>       显示网卡状态等信息</p>
+]]></content>
+      <tags>
+        <tag>linux</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>ohh</title>
+    <url>/2023/06/02/ohh/</url>
+    <content><![CDATA[]]></content>
+  </entry>
+  <entry>
+    <title>使用ipv6部署ceph集群</title>
+    <url>/2023/06/02/%E4%BD%BF%E7%94%A8ipv6%E9%83%A8%E7%BD%B2ceph%E9%9B%86%E7%BE%A4/</url>
+    <content><![CDATA[<p>使用 <strong>ipv6</strong> 部署 <strong>ceph</strong> 多节点集群</p>
+<p>ceph.conf 配置文件如下：</p>
+<pre><code>public_network = 2001::0/64
+cluster_network = 2001::0/64
+ms_bind_ipv6 = true
+</code></pre>
+<p>在进行osd创建时无报错，创建好之后发现全部down掉了，且 <code>osd tree</code> 显示无host分组，查看日志发现：</p>
+<span id="more"></span>
+
+<pre><code>unable to find any IPv4 address in networks &#39;2001::0/64&#39; interfaces &#39;&#39;
+Failed to pick public address.
+</code></pre>
+<p><strong>osd默认找的是 ipv4 地址</strong>，可是配置文件已经指定ipv6了，不明所以</p>
+<p>最终查找相关文档，<strong>不仅需要指定ipv6，同时还要屏蔽ipv4</strong></p>
+<p>配置文件中需要添加以下：</p>
+<pre><code>ms_bind_ipv4 = false
+</code></pre>
+<p>至此恢复正常了！</p>
+]]></content>
+      <tags>
+        <tag>ceph linux</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>认识和使用LVM</title>
+    <url>/2023/06/05/%E8%AE%A4%E8%AF%86%E5%92%8C%E4%BD%BF%E7%94%A8LVM/</url>
+    <content><![CDATA[<h1 id="疑惑"><a href="#疑惑" class="headerlink" title="疑惑"></a>疑惑</h1><p>最近在反复搭建ceph集群过程中，总是遇到osd创建不成功的问题，疑似硬盘残留信息，排查中引出了很多陌生的命令，比如vgremove等，于是打算重新了解这部分。</p>
+<h1 id="LVM是什么？"><a href="#LVM是什么？" class="headerlink" title="LVM是什么？"></a>LVM是什么？</h1><blockquote>
+<p>逻辑卷管理器（LVM，Logical Volume Manager）是一种把硬盘空间分配成逻辑卷的方法。</p>
+</blockquote>
+<p>看到定义可能还比较懵，不妨结合场景：</p>
+<blockquote>
+<p>有一块系统盘空间随着时间推移容量需要扩容该怎么做？</p>
+</blockquote>
+<span id="more"></span>
+
+<pre><code>这时候使用LVM就比较方便了，它可以弹性的调整文件系统的容量，可以整合多个物理分区在一起，让这些分区看起来像是一个磁盘一样。通俗理解就是它可以将很多硬盘/分区全部拿过来作为一个资源池，然后自己再随意划分成逻辑层面的分区，那么这个分区后期进行扩容缩容删除就比较方便了！
+</code></pre>
+<h1 id="LVM相关概念"><a href="#LVM相关概念" class="headerlink" title="LVM相关概念"></a>LVM相关概念</h1><h2 id="1、Physical-Volume，PV，物理卷"><a href="#1、Physical-Volume，PV，物理卷" class="headerlink" title="1、Physical Volume，PV，物理卷"></a>1、Physical Volume，PV，物理卷</h2><pre><code>[root@node3 ~]# fdisk /dev/sdb
+Welcome to fdisk (util-linux 2.23.2).
+
+Changes will remain in memory only, until you decide to write them.
+Be careful before using the write command.
+
+Device does not contain a recognized partition table
+Building a new DOS disklabel with disk identifier 0x172f2548.
+
+Command (m for help): p                                        ###输入 p 查看分区情况
+
+Disk /dev/sdb: 10.7 GB, 10737418240 bytes, 20971520 sectors
+Units = sectors of 1 * 512 = 512 bytes
+Sector size (logical/physical): 512 bytes / 512 bytes
+I/O size (minimum/optimal): 512 bytes / 512 bytes
+Disk label type: dos
+Disk identifier: 0x172f2548
+
+   Device Boot      Start         End      Blocks   Id  System
+
+Command (m for help): n                                      ###输入 n 创建新分区
+Partition type:
+   p   primary (0 primary, 0 extended, 4 free)
+   e   extended
+Select (default p): p                                        ### 默认是 p ，创建主分区，视情况而定
+Partition number (1-4, default 1): 1                         ###这里做第一块主分区
+First sector (2048-20971519, default 2048):
+Using default value 2048
+Last sector, +sectors or +size&#123;K,M,G&#125; (2048-20971519, default 20971519):
+Using default value 20971519
+Partition 1 of type Linux and of size 10 GiB is set
+
+Command (m for help): p                                      ###再次输入 p 查看分区情况
+
+Disk /dev/sdb: 10.7 GB, 10737418240 bytes, 20971520 sectors
+Units = sectors of 1 * 512 = 512 bytes
+Sector size (logical/physical): 512 bytes / 512 bytes
+I/O size (minimum/optimal): 512 bytes / 512 bytes
+Disk label type: dos
+Disk identifier: 0x172f2548
+
+   Device Boot      Start         End      Blocks   Id  System
+/dev/sdb1            2048    20971519    10484736   83  Linux
+
+Command (m for help): w                                 ###最后输入 w 保存从sdb分出来的sdb1    
+The partition table has been altered!
+
+Calling ioctl() to re-read partition table.
+Syncing disks.
+</code></pre>
+<blockquote>
+<p>fdisk -l查看是否分区成功</p>
+</blockquote>
+<pre><code>[root@node3 ~]# fdisk -l
+
+Disk /dev/sdb: 10.7 GB, 10737418240 bytes, 20971520 sectors
+Units = sectors of 1 * 512 = 512 bytes
+Sector size (logical/physical): 512 bytes / 512 bytes
+I/O size (minimum/optimal): 512 bytes / 512 bytes
+Disk label type: dos
+Disk identifier: 0x172f2548
+
+   Device Boot      Start         End      Blocks   Id  System
+/dev/sdb1            2048    20971519    10484736   83  Linux
+</code></pre>
+<blockquote>
+<p>可以看到实际分区Id字段为83，使用时需要通过 fdisk 命令将Id字段调整为8e(LVM 的标识符)，再经过 pvcreate 命令将它转为 LVM 最底层的物理卷(PV)，之后这些PV才能够被利用</p>
+</blockquote>
+<pre><code>[root@node3 ~]# fdisk /dev/sdb
+Welcome to fdisk (util-linux 2.23.2).
+
+Changes will remain in memory only, until you decide to write them.
+Be careful before using the write command.
+
+
+Command (m for help): t                                  ###输入 t 修改分区类型
+Selected partition 1
+Hex code (type L to list all codes): L                   ###输入 L 列出所有分区类型
+
+ 0  Empty           24  NEC DOS         81  Minix / old Lin bf  Solaris
+ 1  FAT12           27  Hidden NTFS Win 82  Linux swap / So c1  DRDOS/sec (FAT-
+ 2  XENIX root      39  Plan 9          83  Linux           c4  DRDOS/sec (FAT-
+ 3  XENIX usr       3c  PartitionMagic  84  OS/2 hidden C:  c6  DRDOS/sec (FAT-
+ 4  FAT16 &lt;32M      40  Venix 80286     85  Linux extended  c7  Syrinx
+ 5  Extended        41  PPC PReP Boot   86  NTFS volume set da  Non-FS data
+ 6  FAT16           42  SFS             87  NTFS volume set db  CP/M / CTOS / .
+ 7  HPFS/NTFS/exFAT 4d  QNX4.x          88  Linux plaintext de  Dell Utility
+ 8  AIX             4e  QNX4.x 2nd part 8e  Linux LVM       df  BootIt
+ 9  AIX bootable    4f  QNX4.x 3rd part 93  Amoeba          e1  DOS access
+ a  OS/2 Boot Manag 50  OnTrack DM      94  Amoeba BBT      e3  DOS R/O
+ b  W95 FAT32       51  OnTrack DM6 Aux 9f  BSD/OS          e4  SpeedStor
+ c  W95 FAT32 (LBA) 52  CP/M            a0  IBM Thinkpad hi eb  BeOS fs
+ e  W95 FAT16 (LBA) 53  OnTrack DM6 Aux a5  FreeBSD         ee  GPT
+ f  W95 Ext&#39;d (LBA) 54  OnTrackDM6      a6  OpenBSD         ef  EFI (FAT-12/16/
+10  OPUS            55  EZ-Drive        a7  NeXTSTEP        f0  Linux/PA-RISC b
+11  Hidden FAT12    56  Golden Bow      a8  Darwin UFS      f1  SpeedStor
+12  Compaq diagnost 5c  Priam Edisk     a9  NetBSD          f4  SpeedStor
+14  Hidden FAT16 &lt;3 61  SpeedStor       ab  Darwin boot     f2  DOS secondary
+16  Hidden FAT16    63  GNU HURD or Sys af  HFS / HFS+      fb  VMware VMFS
+17  Hidden HPFS/NTF 64  Novell Netware  b7  BSDI fs         fc  VMware VMKCORE
+18  AST SmartSleep  65  Novell Netware  b8  BSDI swap       fd  Linux raid auto
+1b  Hidden W95 FAT3 70  DiskSecure Mult bb  Boot Wizard hid fe  LANstep
+1c  Hidden W95 FAT3 75  PC/IX           be  Solaris boot    ff  BBT
+1e  Hidden W95 FAT1 80  Old Minix
+Hex code (type L to list all codes): 8e                ###输入 8e 修改为指定分区类型
+Changed type of partition &#39;Linux&#39; to &#39;Linux LVM&#39;
+
+Command (m for help): p                                ######输入 p 查看分区情况
+
+Disk /dev/sdb: 10.7 GB, 10737418240 bytes, 20971520 sectors
+Units = sectors of 1 * 512 = 512 bytes
+Sector size (logical/physical): 512 bytes / 512 bytes
+I/O size (minimum/optimal): 512 bytes / 512 bytes
+Disk label type: dos
+Disk identifier: 0x172f2548
+
+   Device Boot      Start         End      Blocks   Id  System
+/dev/sdb1            2048    20971519    10484736   8e  Linux LVM
+
+Command (m for help): w                                ###最后输入 w 保存修改的分区类型
+The partition table has been altered!
+
+Calling ioctl() to re-read partition table.
+Syncing disks.
+</code></pre>
+<blockquote>
+<p>使用pvcreate创建pv</p>
+</blockquote>
+<pre><code>[root@node3 ~]# pvcreate /dev/sdb1
+  Physical volume &quot;/dev/sdb1&quot; successfully created.
+</code></pre>
+<h2 id="2、Volume-Group，VG，卷组"><a href="#2、Volume-Group，VG，卷组" class="headerlink" title="2、Volume Group，VG，卷组"></a>2、Volume Group，VG，卷组</h2><blockquote>
+<p>VG可以理解为很多物理卷（PV）所组成的组</p>
+</blockquote>
+<pre><code>[root@node3 ~]# vgcreate storage /dev/sdb1
+  Volume group &quot;storage&quot; successfully created
+
+[root@node3 ~]# vgdisplay
+  --- Volume group ---
+  VG Name               storage
+  System ID
+  Format                lvm2
+  Metadata Areas        1
+  Metadata Sequence No  1
+  VG Access             read/write
+  VG Status             resizable
+  MAX LV                0
+  Cur LV                0
+  Open LV               0
+  Max PV                0
+  Cur PV                1
+  Act PV                1
+  VG Size               &lt;10.00 GiB
+  PE Size               4.00 MiB
+  Total PE              2559
+  Alloc PE / Size       0 / 0
+  Free  PE / Size       2559 / &lt;10.00 GiB
+  VG UUID               fK1Wcs-B1BL-TY3G-IRiJ-7JnV-wd0T-CRFx95
+</code></pre>
+<blockquote>
+<p>使用vgextend添加 pv 到 vg</p>
+</blockquote>
+<pre><code>[root@node3 ~]# vgextend storage /dev/sdc
+sdc   sdc1
+
+[root@node3 ~]# vgextend storage /dev/sdc1
+  Physical volume &quot;/dev/sdc1&quot; successfully created.
+  Volume group &quot;storage&quot; successfully extended
+[root@node3 ~]# vgdisplay
+  --- Volume group ---
+  VG Name               storage
+  System ID
+  Format                lvm2
+  Metadata Areas        2
+  Metadata Sequence No  2
+  VG Access             read/write
+  VG Status             resizable
+  MAX LV                0
+  Cur LV                0
+  Open LV               0
+  Max PV                0
+  Cur PV                2
+  Act PV                2
+  VG Size               19.99 GiB
+  PE Size               4.00 MiB
+  Total PE              5118
+  Alloc PE / Size       0 / 0
+  Free  PE / Size       5118 / 19.99 GiB
+  VG UUID               fK1Wcs-B1BL-TY3G-IRiJ-7JnV-wd0T-CRFx95
+</code></pre>
+<p>可以看到两个 pv 已经成功添加到 vg 中</p>
+<h2 id="3、Logical-Volume，LV，逻辑卷"><a href="#3、Logical-Volume，LV，逻辑卷" class="headerlink" title="3、Logical Volume，LV，逻辑卷"></a>3、Logical Volume，LV，逻辑卷</h2><blockquote>
+<p>LV 是由 VG 切分而来的，此时 LV 就可以当成一个分区格式化来使用了，</p>
+</blockquote>
+<p>lvcreate 参数<br>-L 是直接制定容量，基础单位是MB，如果要切割出1G空间，则 -L 1G，MB以此类推。</p>
+<p>-l 是以基本单元的个数为单位，每个基本单元的大小是4MB，-l 20，则是切割出4*20&#x3D;80M空间。</p>
+<p>-n 是指定生成逻辑卷的名称。</p>
+<blockquote>
+<p>在卷组中切割出一个：名称为test1，大小为5G的空间：</p>
+</blockquote>
+<pre><code>[root@node3 ~]# lvcreate -n test1 -L 5G storage
+  Logical volume &quot;test1&quot; created.
+
+[root@node3 ~]# lvdisplay                        ###查看lv
+  --- Logical volume ---
+  LV Path                /dev/storage/test1
+  LV Name                test1
+  VG Name                storage
+  LV UUID                WkSHKt-2GPL-sZX0-ZZeu-KGZB-9Gao-vufFmC
+  LV Write Access        read/write
+  LV Creation host, time node3, 2023-02-01 15:22:25 +0800
+  LV Status              available
+  # open                 0
+  LV Size                5.00 GiB
+  Current LE             1280
+  Segments               1
+  Allocation             inherit
+  Read ahead sectors     auto
+  - currently set to     8192
+  Block device           253:0
+</code></pre>
+<blockquote>
+<p>格式化、挂载使用</p>
+</blockquote>
+<pre><code>[root@node3 ~]# mkfs.ext4 /dev/storage/test1
+mke2fs 1.42.9 (28-Dec-2013)
+Filesystem label=
+OS type: Linux
+Block size=4096 (log=2)
+Fragment size=4096 (log=2)
+Stride=0 blocks, Stripe width=0 blocks
+327680 inodes, 1310720 blocks
+65536 blocks (5.00%) reserved for the super user
+First data block=0
+Maximum filesystem blocks=1342177280
+40 block groups
+32768 blocks per group, 32768 fragments per group
+8192 inodes per group
+Superblock backups stored on blocks:
+    32768, 98304, 163840, 229376, 294912, 819200, 884736
+
+Allocating group tables: done
+Writing inode tables: done
+Creating journal (32768 blocks): done
+Writing superblocks and filesystem accounting information: done
+</code></pre>
+<pre><code>[root@node3 ~]# mkdir /mnt/dir1
+
+[root@node3 ~]# mount /dev/storage/test1 /mnt/dir1/
+
+[root@node3 ~]# df -h
+Filesystem                 Size  Used Avail Use% Mounted on
+devtmpfs                   1.9G     0  1.9G   0% /dev
+tmpfs                      1.9G     0  1.9G   0% /dev/shm
+tmpfs                      1.9G   20M  1.9G   2% /run
+tmpfs                      1.9G     0  1.9G   0% /sys/fs/cgroup
+/dev/sda2                   19G  2.2G   17G  12% /
+/dev/sda1                 1014M  142M  873M  14% /boot
+tmpfs                      378M     0  378M   0% /run/user/0
+/dev/mapper/storage-test1  4.8G   20M  4.6G   1% /mnt/dir1
+</code></pre>
+<h2 id="4、Physical-Extend，PE，物理扩展块"><a href="#4、Physical-Extend，PE，物理扩展块" class="headerlink" title="4、Physical Extend，PE，物理扩展块"></a>4、Physical Extend，PE，物理扩展块</h2><p>PE 是整个 LVM 最小的存储块，LVM 的 VG 最多仅能含有 65534 个 PE，一个 PE 默认的大小时 4M。<br>所以可以通过调整 PE 来调整 VG最大容量。</p>
+<pre><code># vgdisplay
+  --- Volume group ---
+  VG Name               ceph-77651246-631b-44d8-9ece-1cc0af8e0b68
+  System ID
+  Format                lvm2
+  Metadata Areas        1
+  Metadata Sequence No  17
+  VG Access             read/write
+  VG Status             resizable
+  MAX LV                0
+  Cur LV                1
+  Open LV               1
+  Max PV                0
+  Cur PV                1
+  Act PV                1
+  VG Size               9.00 GiB
+  PE Size               1.00 GiB
+  Total PE              9
+  Alloc PE / Size       9 / 9.00 GiB
+  Free  PE / Size       0 / 0
+  VG UUID               GdTfRy-au4B-DgAN-Ej2X-XgdK-hFNz-wDrLm1
+</code></pre>
+<h1 id="LV-扩容、缩容"><a href="#LV-扩容、缩容" class="headerlink" title="LV 扩容、缩容"></a>LV 扩容、缩容</h1><h2 id="扩容"><a href="#扩容" class="headerlink" title="扩容"></a>扩容</h2><pre><code>[root@node3 ~]# umount /mnt/dir1/                                  ###解除挂载
+
+[root@node3 ~]# lvextend -L 15G /dev/storage/test1                 ###vg容量不够
+  Insufficient free space: 2560 extents needed, but only 2558 available
+
+[root@node3 ~]# lvextend -L 10G /dev/storage/test1             ###扩展后的分区容量，必须大于原容量
+  Size of logical volume storage/test1 changed from 5.00 GiB (1280 extents) to 10.00 GiB (2560 extents).
+  Logical volume storage/test1 successfully resized.
+
+[root@node3 ~]# e2fsck -f /dev/storage/test1                    ###检查硬盘的完整性
+e2fsck 1.42.9 (28-Dec-2013)
+Pass 1: Checking inodes, blocks, and sizes
+Pass 2: Checking directory structure
+Pass 3: Checking directory connectivity
+Pass 4: Checking reference counts
+Pass 5: Checking group summary information
+/dev/storage/test1: 11/327680 files (0.0% non-contiguous), 58462/1310720 blocks
+
+[root@node3 ~]# resize2fs /dev/storage/test1                     ###重置硬盘容量
+resize2fs 1.42.9 (28-Dec-2013)
+Resizing the filesystem on /dev/storage/test1 to 2621440 (4k) blocks.
+The filesystem on /dev/storage/test1 is now 2621440 blocks long.
+
+[root@node3 ~]# mount /dev/storage/test1 /mnt/dir1/              ###重新挂载使用
+[root@node3 ~]# df -h
+Filesystem                 Size  Used Avail Use% Mounted on
+devtmpfs                   1.9G     0  1.9G   0% /dev
+tmpfs                      1.9G     0  1.9G   0% /dev/shm
+tmpfs                      1.9G   20M  1.9G   2% /run
+tmpfs                      1.9G     0  1.9G   0% /sys/fs/cgroup
+/dev/sda2                   19G  2.2G   17G  12% /
+/dev/sda1                 1014M  142M  873M  14% /boot
+tmpfs                      378M     0  378M   0% /run/user/0
+/dev/mapper/storage-test1  9.8G   23M  9.2G   1% /mnt/dir1
+</code></pre>
+<h2 id="缩容"><a href="#缩容" class="headerlink" title="缩容"></a>缩容</h2><pre><code>lvextend -L 3G /dev/storage/test1              ###操作参考扩容
+</code></pre>
+<h1 id="LV删除、卸载"><a href="#LV删除、卸载" class="headerlink" title="LV删除、卸载"></a>LV删除、卸载</h1><pre><code>[root@node3 ~]# umount /mnt/dir1/                            ###解除挂载
+
+[root@node3 ~]# lvremove /dev/storage/test1                  ###删除lv
+Do you really want to remove active logical volume storage/test1? [y/n]: y
+  Logical volume &quot;test1&quot; successfully removed
+
+[root@node3 ~]# vgremove storage                             ###删除vg
+Do you really want to remove volume group &quot;storage&quot; containing 1 logical volumes? [y/n]: y
+Do you really want to remove active logical volume storage/test2? [y/n]: y
+  Logical volume &quot;test2&quot; successfully removed
+  Volume group &quot;storage&quot; successfully removed
+
+[root@node3 ~]# pvremove /dev/sdb1                           ###删除pv
+  Labels on physical volume &quot;/dev/sdb1&quot; successfully wiped.
+</code></pre>
+<h3 id="over"><a href="#over" class="headerlink" title="over!!!"></a>over!!!</h3>]]></content>
+      <tags>
+        <tag>linux</tag>
+      </tags>
+  </entry>
+</search>

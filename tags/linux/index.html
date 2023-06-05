@@ -5,7 +5,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>cloud-fei || </title>
+    <title>cloud-fei || linux</title>
     <meta name="author" content="cloud-fei">
     <meta name="description" content=" ">
     <meta name="keywords" content=" ">
@@ -149,326 +149,102 @@
                 </div>
 
                 <div id="main">
-                    <div id="home-head" style=background-image:url('home.jpg')>
-    <script>
-        var menu = document.getElementById("menu")
-        menu.className += " menu-color"
-    </script>
-     
-    <div id="home-info" class="home-info" @click="home_click">
-        <span class="loop"></span>
-        <span class="loop"></span>
-        <span class="loop"></span>
-        <span class="loop"></span>
-        <span class="info">
-            <div class="wrap">
-                <h1>cloud-fei</h1>
-                <h3></h3>
-                <h5></h5>
-            </div>
-        </span>
-    </div>
-     
-</div>
-
-
-
-<div id="home-posts-wrap" class=>
-    <div id="home-posts">
-
-        <div id="posts">
-            
-
-<div class="post">
-
-    <a href="/2023/06/05/Linux网络流量问题排查-UDP丢包/">
-        <h2>
-            Linux网络流量问题排查-UDP丢包
-        </h2>
-    </a>
-
-    <div class="category-and-date">
-
-        
-
-        <span class="date">
-            <span class="icon">
-                <a-icon type="calendar" theme="filled" />
-            </span>
-            2023/6/5
-        </span>
-
-    </div>
-
-    <div class="excerpt">
-        <div class="content" v-pre>
-            
-            <p><em>一直以来对Linux网络这部分了解比较少，解决问题总是没有条理</em></p>
-<p>遇到一个<strong>UDP丢包</strong>的问题：在测试中，一台VM虚拟机，CPU利用率55%左右，内存利用率7%左右，网卡流量也远没到限制的时候出现了丢包情况**</p>
-<p><strong>验证</strong>：<code>netstat -su|grep &quot;packet receive errors&quot;|awk &#39;&#123;print $1&#125;&#39;</code>  ，每30s查看一次，计算这次和上次之间的数值差值发现存在UDP丢包现象。</p>
-<p>首先要看问题出现在哪儿，网络流量的路径是怎样的？</p>
-            
-            
-        </div>
-    </div>
-
-    <div class="post-tags">
-        
-        <span class="icon">
-            <a-icon type="tags" theme="filled" />
-        </span>
+                     
+<div class="categories-tags">
+    
+    <div class="all-s">
         
         
-        <span class="tag">
-            
-            <a href="/tags/linux" style=color:#ffa2c4>
+        <span>
+            <a href="/tags/linux/" style='background:linear-gradient(to right, #fbc2eb 0%, #bbd4ff 100%)'>
+                <span class="icon">
+                    <a-icon type="tag" theme="filled" />
+                </span>
                 linux
             </a>
         </span>
         
-    </div>
-
-    <a href="/2023/06/05/Linux网络流量问题排查-UDP丢包/ " class="go-post">
-        阅读全文
-    </a>
-</div>
-
-<div class="post">
-
-    <a href="/2023/06/05/认识和使用LVM/">
-        <h2>
-            认识和使用LVM
-        </h2>
-    </a>
-
-    <div class="category-and-date">
-
-        
-
-        <span class="date">
-            <span class="icon">
-                <a-icon type="calendar" theme="filled" />
-            </span>
-            2023/6/5
-        </span>
-
-    </div>
-
-    <div class="excerpt">
-        <div class="content" v-pre>
-            
-            <h1 id="疑惑"><a href="#疑惑" class="headerlink" title="疑惑"></a>疑惑</h1><p>最近在反复搭建ceph集群过程中，总是遇到osd创建不成功的问题，疑似硬盘残留信息，排查中引出了很多陌生的命令，比如vgremove等，于是打算重新了解这部分。</p>
-<h1 id="LVM是什么？"><a href="#LVM是什么？" class="headerlink" title="LVM是什么？"></a>LVM是什么？</h1><blockquote>
-<p>逻辑卷管理器（LVM，Logical Volume Manager）是一种把硬盘空间分配成逻辑卷的方法。</p>
-</blockquote>
-<p>看到定义可能还比较懵，不妨结合场景：</p>
-<blockquote>
-<p>有一块系统盘空间随着时间推移容量需要扩容该怎么做？</p>
-</blockquote>
-            
-            
-        </div>
-    </div>
-
-    <div class="post-tags">
-        
-        <span class="icon">
-            <a-icon type="tags" theme="filled" />
-        </span>
         
         
-        <span class="tag">
-            
-            <a href="/tags/linux" style=color:#ff7d73>
-                linux
-            </a>
-        </span>
-        
-    </div>
-
-    <a href="/2023/06/05/认识和使用LVM/ " class="go-post">
-        阅读全文
-    </a>
-</div>
-
-<div class="post">
-
-    <a href="/2023/06/02/使用ipv6部署ceph集群/">
-        <h2>
-            使用ipv6部署ceph集群
-        </h2>
-    </a>
-
-    <div class="category-and-date">
-
-        
-
-        <span class="date">
-            <span class="icon">
-                <a-icon type="calendar" theme="filled" />
-            </span>
-            2023/6/2
-        </span>
-
-    </div>
-
-    <div class="excerpt">
-        <div class="content" v-pre>
-            
-            <p>使用 <strong>ipv6</strong> 部署 <strong>ceph</strong> 多节点集群</p>
-<p>ceph.conf 配置文件如下：</p>
-<pre><code>public_network = 2001::0/64
-cluster_network = 2001::0/64
-ms_bind_ipv6 = true
-</code></pre>
-<p>在进行osd创建时无报错，创建好之后发现全部down掉了，且 <code>osd tree</code> 显示无host分组，查看日志发现：</p>
-            
-            
-        </div>
-    </div>
-
-    <div class="post-tags">
-        
-        <span class="icon">
-            <a-icon type="tags" theme="filled" />
-        </span>
-        
-        
-        <span class="tag">
-            
-            <a href="/tags/ceph-linux" style=color:#ff7d73>
+        <span>
+            <a href="/tags/ceph-linux/" style=background:#ffa2c4>
+                <span class="icon">
+                    <a-icon type="tag" theme="filled" />
+                </span>
                 ceph linux
             </a>
         </span>
         
-    </div>
-
-    <a href="/2023/06/02/使用ipv6部署ceph集群/ " class="go-post">
-        阅读全文
-    </a>
-</div>
-
-<div class="post">
-
-    <a href="/2023/06/02/ohh/">
-        <h2>
-            ohh
-        </h2>
-    </a>
-
-    <div class="category-and-date">
-
-        
-
-        <span class="date">
-            <span class="icon">
-                <a-icon type="calendar" theme="filled" />
-            </span>
-            2023/6/2
-        </span>
-
-    </div>
-
-    <div class="excerpt">
-        <div class="content" v-pre>
-            
-            
-            
-            
-        </div>
-    </div>
-
-    <div class="post-tags">
-        
         
     </div>
+    <div id="archives">
+        
+        <a-timeline>
+            <a-timeline-item color="#a5c2f5">
+                <a-card hoverable>
+                    <div class="item-time">2023/6/5</div>
+                    <a href="/2023/06/05/Linux网络流量问题排查-UDP丢包/">
+                        <h3>Linux网络流量问题排查-UDP丢包</h3>
+                    </a>
+                    <div class="info">
+                        
 
-    <a href="/2023/06/02/ohh/ " class="go-post">
-        阅读全文
-    </a>
-</div>
+                        
+                        <span class="tags">
+                            <span class="icon">
+                                <a-icon type="tags" theme="filled" />
+                            </span>
+                            
+                            <span class="tag">
+                                
+                                <a href="/tags/linux" style=color:#ff7d73>
+                                    linux
+                                </a>
+                            </span>
+                            
+                        </span>
+                        
+                    </div>
+                </a-card>
+            </a-timeline-item>
+        </a-timeline>
+        
+        <a-timeline>
+            <a-timeline-item color="#a5c2f5">
+                <a-card hoverable>
+                    <div class="item-time">2023/6/5</div>
+                    <a href="/2023/06/05/认识和使用LVM/">
+                        <h3>认识和使用LVM</h3>
+                    </a>
+                    <div class="info">
+                        
 
-
-             
-<div class="page-current">
-
-    <div class="prev">
+                        
+                        <span class="tags">
+                            <span class="icon">
+                                <a-icon type="tags" theme="filled" />
+                            </span>
+                            
+                            <span class="tag">
+                                
+                                <a href="/tags/linux" style=color:#00bcd4>
+                                    linux
+                                </a>
+                            </span>
+                            
+                        </span>
+                        
+                    </div>
+                </a-card>
+            </a-timeline-item>
+        </a-timeline>
         
     </div>
-
-    <div class="page-index">
-
-        
-
-        <span class="current">
-            1
-        </span>
-
-        
-
-    </div>
-
-    <div class="next">
-        
-    </div>
-
-</div>
-
-        </div>
-    </div>
-    
-    <div id="home-card">
-        <a-affix :offset-top="card_top">
-    <a-card class="card-style" style="width: 300px">
-        <div class="avatar">
-            <img src="orange.jpg " alt="头像">
-        </div>
-        <div class="name">
-            cloud-fei
-        </div>
-        <div class="descriptions">
-            
-            <div class="description">
-                这里是cloud-fei的个人博客
-            </div>
-            
-        </div>
-        <div class="icon-links">
-            
-            <span class="icon-link">
-                <a target="_blank" rel="noopener" href="https://github.com/cloud-fei">
-
-                    
-                    <a-icon type="github"
-                        theme="filled" />
-                    
-                </a>
-            </span>
-            
-            <span class="icon-link">
-                <a target="_blank" rel="noopener" href="https://twitter.com/">
-
-                    
-                    <a-icon type="twitter"
-                        theme="" />
-                    
-                </a>
-            </span>
-            
-        </div>
-        <div class="friend-links">
-            
-            <div class="friend-link">
-                <a target="_blank" rel="noopener" href="https://www.cnblogs.com/itsfei/">
-                    博客园
-                </a>
-            </div>
-            
-        </div>
-    </a-card>
-</a-affix>
-    </div>
-    
+    <script>
+        new Vue({
+            el: '#archives'
+        })
+    </script>
 </div>
                      
 <footer id="footer">

@@ -9,10 +9,10 @@
     <meta name="author" content="cloud-fei">
     <meta name="description" content=" ">
     <meta name="keywords" content=" ">
-    <link rel="icon" href="/rome.jpg">
+    <link rel="icon" href="/orange.jpg">
     <link rel="stylesheet" href="/css/antd.min.css">
     
-    <link rel="stylesheet" href="/css/full-theme.css">
+    <link rel="stylesheet" href="/css/maiden-theme.css">
     
     <script src="/js/vue.js"></script>
     <script src="/js/antd.min.js"></script>
@@ -166,6 +166,21 @@
         
 
         
+
+        <span class="tags">
+            <span class="icon">
+                <a-icon type="tags" theme="filled" />
+            </span>
+            
+            <span class="tag">
+                
+                <a href="/tags/ceph-linux" style=color:#ff7d73>
+                    ceph linux
+                </a>
+            </span>
+            
+        </span>
+        
     </div>
 
     <div class="content" v-pre>
@@ -176,6 +191,8 @@ cluster_network = 2001::0/64
 ms_bind_ipv6 = true
 </code></pre>
 <p>在进行osd创建时无报错，创建好之后发现全部down掉了，且 <code>osd tree</code> 显示无host分组，查看日志发现：</p>
+<span id="more"></span>
+
 <pre><code>unable to find any IPv4 address in networks &#39;2001::0/64&#39; interfaces &#39;&#39;
 Failed to pick public address.
 </code></pre>
@@ -188,12 +205,6 @@ Failed to pick public address.
 
     </div>
 
-    
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.css">
-    <div id="comment">
-        <div id="gitalk-container">
-        </div>
-    </div>
     
 </div>
                      
@@ -260,21 +271,6 @@ Failed to pick public address.
     })
 </script>
 
-<script src="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js"></script>
-<script>
-    const gitalk = new Gitalk({
-        clientID: '',
-        clientSecret: '',
-        repo: 'hexo-theme-particle',      // The repository of store comments,
-        owner: 'korilin',
-        admin: ['korilin'],
-        language: 'en',
-        id: location.pathname,      // Ensure uniqueness and length less than 50
-        distractionFreeMode: true  // Facebook-like distraction free mode
-    })
-    gitalk.render('gitalk-container')
-</script>
-
-</body>
+<script src="/live2dw/lib/L2Dwidget.min.js?094cbace49a39548bed64abff5988b05"></script><script>L2Dwidget.init({"log":false,"pluginJsPath":"lib/","pluginModelPath":"assets/","pluginRootPath":"live2dw/","tagMode":false});</script></body>
 
 </html>
