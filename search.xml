@@ -139,10 +139,10 @@ ID                                                               ENTITY    NEW
 </code></pre>
 <p>2、根据 crash ID 查询具体详细 <code>ceph crash info 2023-xx-xx_01:35:33.350541Z_b929855b-f264-42df-89ef-bcdb31f6bc18</code></p>
 <p>3、根据报错解决问题</p>
-<p>4、将crash清空，恢复ceph群集状态</p>
+<p>4、确认crash并关闭健康警告</p>
 <pre><code>#批量清除crash
 ceph crash archive-all
-#也可以根据id清除单个crash
+#根据 crash-id 清除单个crash
 ceph crash archive &lt;crash-id&gt;
 </code></pre>
 <p><strong>补充：</strong></p>
