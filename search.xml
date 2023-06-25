@@ -128,6 +128,31 @@ req  rlat fwd  inos caps exi  imi |stry recy recd|subm evts segs repl|ino  dn  |
       </tags>
   </entry>
   <entry>
+    <title>ceph问题记录：1 daemons have recently crashed</title>
+    <url>/2023/06/25/ceph%E9%97%AE%E9%A2%98%E8%AE%B0%E5%BD%95%EF%BC%9A1-daemons-have-recently-crashed/</url>
+    <content><![CDATA[<h4 id="问题"><a href="#问题" class="headerlink" title="问题:"></a>问题:</h4><p>ceph 集群运行运行过程中出现警告<code>1 daemons have recently crashed</code></p>
+<span id="more"></span>
+<h4 id="排查"><a href="#排查" class="headerlink" title="排查"></a>排查</h4><p>1、查询最新 crash 信息 <code>ceph crash ls-new</code></p>
+<pre><code>[root@node1 ~]# ceph crash ls-new
+ID                                                               ENTITY    NEW
+2023-xx-xx_01:35:33.350541Z_b929855b-f264-42df-89ef-bcdb31f6bc18 mgr.node1  *
+</code></pre>
+<p>2、根据 crash ID 查询具体详细 <code>ceph crash info 2023-xx-xx_01:35:33.350541Z_b929855b-f264-42df-89ef-bcdb31f6bc18</code></p>
+<p>3、根据报错解决问题</p>
+<p>4、将crash清空，恢复ceph群集状态</p>
+<pre><code>#批量清除crash
+ceph crash archive-all
+#也可以根据id清除单个crash
+ceph crash archive &lt;crash-id&gt;
+</code></pre>
+<p><strong>补充：</strong></p>
+<p>查看内核日志<code>dmesg -T</code></p>
+]]></content>
+      <tags>
+        <tag>ceph</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>ohh</title>
     <url>/2023/06/02/ohh/</url>
     <content><![CDATA[<p>重新开始的地方~</p>
