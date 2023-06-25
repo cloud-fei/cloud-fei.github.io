@@ -79,9 +79,59 @@
       </tags>
   </entry>
   <entry>
+    <title>ceph问题记录：1 MDSs report oversized cache</title>
+    <url>/2023/06/25/ceph%E9%97%AE%E9%A2%98%E8%AE%B0%E5%BD%95%EF%BC%9A1-MDSs-report-oversized-cache/</url>
+    <content><![CDATA[<h4 id="遇到问题："><a href="#遇到问题：" class="headerlink" title="遇到问题："></a>遇到问题：</h4><p>使用 vdbench 压测 ceph 目录，期间会进行海量小文件的创建，当达到10亿+数量时，集群出现警告<code>1 MDSs report oversized cache</code></p>
+<p>其实根据字面意思不难看出，是因为 <strong>mds 内存</strong>不够导致</p>
+<span id="more"></span>
+
+<h4 id="解决方法"><a href="#解决方法" class="headerlink" title="解决方法"></a>解决方法</h4><p>查看一下当前mds内存限制<code>mds_cache_memory_limit</code>是<code>4G</code>，报警阈值<code>mds_health_cache_threshold</code>为 1.5（即达到 1.5 倍时产生告警）</p>
+<pre><code>[root@node1 ~]# ceph daemon mds.node1 config show | grep mds_cache
+    &quot;mds_cache_memory_limit&quot;: &quot;4294967296&quot;,
+    &quot;mds_cache_mid&quot;: &quot;0.700000&quot;,
+    &quot;mds_cache_reservation&quot;: &quot;0.050000&quot;,
+    &quot;mds_cache_size&quot;: &quot;0&quot;,
+    &quot;mds_cache_trim_decay_rate&quot;: &quot;1.000000&quot;,
+    &quot;mds_cache_trim_interval&quot;: &quot;1&quot;,
+    &quot;mds_cache_trim_threshold&quot;: &quot;65536&quot;,
+
+[root@node1 ~]# ceph daemon mds.node1 config show | grep mds_health
+    &quot;mds_health_cache_threshold&quot;: &quot;1.500000&quot;,
+    &quot;mds_health_summarize_threshold&quot;: &quot;10&quot;,
+</code></pre>
+<p>修改<code>mds_cache_memory_limit</code>为<code>10G</code></p>
+<pre><code>//方法一：
+[root@node1 ~]# ceph daemon mds.node1 config set mds_cache_memory_limit 10737418240
+&#123;
+    &quot;success&quot;: &quot;mds_cache_memory_limit = &#39;10737418240&#39; &quot;
+&#125;
+
+//方法二
+[root@node1 ~]# vim /etc/ceph/ceph.conf
+[global]
+mds cache memory limit = 10737418240
+</code></pre>
+<p>再观察集群状态 <code>HEALTH_OK</code>√</p>
+<p><strong>补充：</strong></p>
+<pre><code>[root@node1 ~]# ceph daemonperf mds.node1
+---------------mds---------------- --mds_cache--- ------mds_log------ -mds_mem- ----mds_server----- mds_ -----objecter------ purg
+req  rlat fwd  inos caps exi  imi |stry recy recd|subm evts segs repl|ino  dn  |hcr  hcs  hsr  cre |sess|actv rd   wr   rdwr|purg|
+  0    0    0  2.4M 2.4M   0    0 |  0    0    0 |657  322k 438    0 |2.4M 2.4M|  0    0    0    0 |  1 |  0    0    0    0 |  0
+5.3k   2    0  2.4M 2.4M   0    0 |  0    0    0 |7.5k 329k 448    0 |2.4M 2.4M|5.3k   0    0    0 |  1 |  0   10   93    0 |  0
+7.1k   1    0  2.4M 2.4M   0    0 |  0    0    0 |7.2k 336k 461    0 |2.4M 2.4M|7.1k   0    0    0 |  1 |  0   14  173    0 |  0
+4.4k   1    0  2.4M 2.4M   0    0 |  0    0    0 |4.4k 341k 467    0 |2.4M 2.4M|4.4k   0    0    0 |  1 |  0    8   48    0 |  0
+1.1k   1    0  2.4M 2.4M   0    0 |  0    0    0 |1.1k 342k 470    0 |2.4M 2.4M|1.1k   0    0    0 |  1 |  0    2   24    0 |  0
+</code></pre>
+]]></content>
+      <tags>
+        <tag>ceph</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>ohh</title>
     <url>/2023/06/02/ohh/</url>
-    <content><![CDATA[]]></content>
+    <content><![CDATA[<p>重新开始的地方~</p>
+]]></content>
   </entry>
   <entry>
     <title>vdbench-磁盘性能测试工具.md</title>
