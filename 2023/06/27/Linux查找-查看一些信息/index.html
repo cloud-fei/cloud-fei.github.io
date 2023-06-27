@@ -5,7 +5,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>cloud-fei || Linux网络流量问题排查-UDP丢包</title>
+    <title>cloud-fei || Linux查找/查看一些信息</title>
     <meta name="author" content="cloud-fei">
     <meta name="description" content=" ">
     <meta name="keywords" content=" ">
@@ -153,14 +153,14 @@
 <link rel="stylesheet" href="/css/post-body.css">
 <div class="article">
     <div>
-        <h1>Linux网络流量问题排查-UDP丢包 </h1>
+        <h1>Linux查找/查看一些信息 </h1>
     </div>
     <div class="info">
         <span class="date">
             <span class="icon">
                 <a-icon type="calendar" theme="filled" />
             </span>
-            2023/6/5
+            2023/6/27
         </span>
 
         
@@ -174,7 +174,7 @@
             
             <span class="tag">
                 
-                <a href="/tags/linux" style=color:#879cff>
+                <a href="/tags/linux" style=color:#00bcd4>
                     linux
                 </a>
             </span>
@@ -184,76 +184,176 @@
     </div>
 
     <div class="content" v-pre>
-        <p><em>一直以来对Linux网络这部分了解比较少，解决问题总是没有条理</em></p>
-<p>遇到一个<strong>UDP丢包</strong>的问题：在测试中，一台VM虚拟机，CPU利用率55%左右，内存利用率7%左右，网卡流量也远没到限制的时候出现了丢包情况**</p>
-<p><strong>验证</strong>：<code>netstat -su|grep &quot;packet receive errors&quot;|awk &#39;&#123;print $1&#125;&#39;</code>  ，每30s查看一次，计算这次和上次之间的数值差值发现存在UDP丢包现象。</p>
-<p>首先要看问题出现在哪儿，网络流量的路径是怎样的？</p>
+        <h4 id="查找文件-x2F-服务"><a href="#查找文件-x2F-服务" class="headerlink" title="查找文件&#x2F;服务"></a>查找文件&#x2F;服务</h4><blockquote>
+<p>查找文件 <code>find</code></p>
+</blockquote>
+<pre><code>-name：按文件名来查找文件
+-prune：不在当前指定目录中查找
+
+# 查找 / 目录下所有名称为hosts的文件（可使用 * 模糊匹配）
+[root@node1 ~]# find / -name hosts
+/etc/hosts
+</code></pre>
 <span id="more"></span>
 
-<ul>
-<li><p>1、网络流量通过有线&#x2F;无线发送到网卡</p>
-</li>
-<li><p>2、网卡驱动读取报文放到ring buffer（此时调用DMA，不经过CPU）</p>
-</li>
-<li><p>3、内核从ring buffer中读取报文进行处理，执行IP层，TCP&#x2F;UDP层逻辑</p>
-</li>
-<li><p>4、把报文发到用户态的socket buffer中，应用程序读取socket buffer并进行处理</p>
-</li>
-</ul>
-<p>可能出现问题的地方：1、网卡处理时丢包   2、内核处理时丢包   3、应用程序处理时</p>
 <blockquote>
-<p>1、网卡阶段：</p>
+<p>查找系统命令位置 <code>which</code></p>
 </blockquote>
-<p>两种方法：</p>
-<p>(1).  <code>ifconfig</code> 查看 <strong>RX errors dropped</strong></p>
-<p>(2).  <code>ethtool -S eth0 |egrep &quot;err|drop&quot;</code></p>
-<p>如果存在丢包，可以查看网卡的ring buffer size是否设置太小达到瓶颈，使用<code>ethtool -g eth0</code>查看最大值和当前值，使用<code>ethtool -G eth0 rx 1024</code>进行修改</p>
-<p>如果网卡方面没问题，那么尝试内核方面查看</p>
+<pre><code>[root@node1 ~]# which echo
+/usr/bin/echo
+</code></pre>
 <blockquote>
-<p>2、内核阶段</p>
+<p>查找命令是自带的还是外部安装的 <code>type</code></p>
 </blockquote>
-<p>linux 系统在接收报文之后，会把报文保存到缓存区中。因为缓存区的大小是有限的，如果出现 UDP 报文过大(超过缓存区大小或者 MTU 大小)、接收到报文的速率太快，都可能导致 linux 因为缓存满而直接丢包的情况。</p>
-<p>使用<code>sysctl -a |grep net.core</code>查看相关参数设置</p>
-<p>重点看这几个参数：</p>
-<p><strong>&#x2F;proc&#x2F;sys&#x2F;net&#x2F;core&#x2F;rmem_max</strong>：允许设置的 receive buffer 最大值</p>
-<p><strong>&#x2F;proc&#x2F;sys&#x2F;net&#x2F;core&#x2F;rmem_default</strong>：默认使用的 receive buffer 值</p>
-<p><strong>&#x2F;proc&#x2F;sys&#x2F;net&#x2F;core&#x2F;wmem_max</strong>：允许设置的 send buffer 最大值</p>
-<p><strong>&#x2F;proc&#x2F;sys&#x2F;net&#x2F;core&#x2F;wmem_dafault</strong>：默认使用的 send buffer 最大值</p>
-<p>但是这些初始值并不是为了应对大流量的 UDP 报文，如果应用程序接收和发送 UDP 报文非常多，把这个值调大。</p>
-<p>如果发现某些参数设置不合理需要修改的话：</p>
-<p><strong>方法一</strong>：使用 sysctl 命令让它立即生效</p>
-<p>接收最大值设置 sysctl -w net.core.rmem_max&#x3D;56214400 # 设置为 50M</p>
-<p>接收默认值设置 sysctl -w net.core.rmem_default&#x3D;26214400 # 设置为 25M</p>
-<p>发送最大值 sysctl -w net.core.wmem_max&#x3D;26214400 # 设置为 25M</p>
-<p>发送默认值 sysctl -w net.core.wmem_default&#x3D;26214400 # 设置为 25M</p>
-<p><strong>方法二</strong>：修改对应路径文件的参数或者修改 &#x2F;etc&#x2F;sysctl.conf 中对应的参数在下次启动时让参数保持生效（sysctl -p  生效）</p>
+<pre><code>[root@node1 ~]# type cd
+cd is a shell builtin
+[root@node1 ~]# type ssh
+ssh is /usr/bin/ssh
+</code></pre>
 <blockquote>
-<p>3、应用阶段</p>
+<p>查找端口号&#x2F;服务是否开启 <code>netstat</code> </p>
 </blockquote>
-<p>系统的 UDP buffer size，调节的 sysctl 参数只是系统允许的最大值，每个应用程序在创建 socket 时需要设置自己 socket buffer size 的值。linux 系统会把接受到的报文放到 socket 的 buffer 中，应用程序从 buffer 中不断地读取报文。</p>
-<p>另外一个因素是应用读取 buffer 中报文的速度，对于应用程序来说，处理报文应该采取异步的方式。</p>
-<p>其他可能原因：</p>
-<p>检查防火墙状态 <code>systemctl status firewalld</code>，或者 <code>iptables</code> 阻断了部分流量？</p>
-<p>要处理的实际业务中，每一个连接会占用一个句柄，测试有反馈有 <em>“Too many open files”</em> 的错误。这可能导致数据丢失而没有正确执行实际业务。</p>
-<p>陆续学习和更新</p>
-<p><a target="_blank" rel="noopener" href="https://blog.csdn.net/weixin_40754332/article/details/106924810">参考链接：数据传输过程中丢包分析处理</a><em>（如有侵权请联系删除）</em>：</p>
-<p>此外补充下小工具的使用</p>
-<ul>
-<li>netstat   主要是用于列出系统上所有的网络套接字连接情况，包括 tcp, udp 以及 unix 套接字，另外它还能列出处于监听状态（即等待接入请求）的套接字。</li>
-</ul>
-<p><strong>-a</strong>      显示所有连接</p>
-<p><strong>-t</strong>      TCP连接</p>
-<p><strong>-u</strong>      UDP连接</p>
-<p><strong>-l</strong>       列出所有处于监听状态的 Sockets</p>
-<p><strong>-s</strong>      显示所有端口的统计信息，可配合-u&#x2F;-t使用</p>
-<p><strong>Recv-Q</strong> 表示收到的数据已经在本地接收缓冲，但是还有多少没有被进程取走</p>
-<p><strong>send-Q</strong> 表示本地待发送的数据</p>
-<p>这两个值通常应该为0，如果不为0可能是有问题的。packets在两个队列里都不应该有堆积状态。可接受短暂的非0情况。</p>
-<p><a target="_blank" rel="noopener" href="https://blog.csdn.net/wangquan1992/article/details/109508822">参考链接：netstat 命令详解及实现原理</a></p>
-<ul>
-<li>ethtool</li>
-</ul>
-<p><strong>ethtool eth0</strong>       显示网卡状态等信息</p>
+<pre><code># 查找端口号对应的服务
+[root@node1 ~]# netstat -nlp | grep 22
+tcp        0      0 0.0.0.0:22              0.0.0.0:*               LISTEN      1125/sshd
+tcp6       0      0 :::22                   :::*                    LISTEN      1125/sshd
+unix  2      [ ACC ]     STREAM     LISTENING     635      227/@usr/sbin/plymo  @/org/freedesktop/plymouthd
+
+# 查找服务对应的端口号
+[root@node1 ~]# netstat -nlp | grep ssh
+tcp        0      0 0.0.0.0:22              0.0.0.0:*               LISTEN      1125/sshd
+tcp6       0      0 :::22                   :::*                    LISTEN      1125/sshd
+</code></pre>
+<blockquote>
+<p>系统服务查看 <code>systemctl list-unit-files</code></p>
+</blockquote>
+<pre><code># 查看系统是否有某个服务
+[root@node1 ~]# systemctl list-unit-files | grep ssh
+sshd-keygen.service                           static
+sshd.service                                  enabled
+sshd@.service                                 static
+sshd.socket                                   disabled
+</code></pre>
+<h4 id="查看硬件信息"><a href="#查看硬件信息" class="headerlink" title="查看硬件信息"></a>查看硬件信息</h4><h4 id="1-CPU"><a href="#1-CPU" class="headerlink" title="1. CPU"></a>1. CPU</h4><pre><code>[root@node1 ~]# lscpu
+Architecture:          x86_64                       # cpu架构
+CPU op-mode(s):        32-bit, 64-bit              
+Byte Order:            Little Endian
+CPU(s):                2                            # 共有2核
+On-line CPU(s) list:   0,1
+Thread(s) per core:    1                            # 每个cpu核只支持1个线程（不支持超线程）
+Core(s) per socket:    1                            # 每个cpu只有1个核
+Socket(s):             2                            # 共有两个核
+NUMA node(s):          1
+Vendor ID:             GenuineIntel                 # cpu产商 intel
+CPU family:            6
+Model:                 165
+Model name:            Intel(R) Core(TM) i7-10750H CPU @ 2.60GHz
+Stepping:              2
+CPU MHz:               2592.007
+BogoMIPS:              5184.01
+Hypervisor vendor:     VMware                       # 虚拟平台 
+Virtualization type:   full
+L1d cache:             32K
+L1i cache:             32K
+L2 cache:              256K
+L3 cache:              12288K
+NUMA node0 CPU(s):     0,1
+Flags:                 fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush mmx fxsr sse sse2 ss syscallnx pdpe1gb rdtscp lm constant_tsc arch_perfmon nopl xtopology tsc_reliable nonstop_tsc eagerfpu pni pclmulqdq ssse3 fma cx16 pcid sse4_1 sse4_2 x2apic movbe popcnt aes xsave avx f16c rdrand hypervisor lahf_lm abm 3dnowprefetch invpcid_single ssbd rsb_ctxsw ibrs ibpb stibp fsgsbase tsc_adjust bmi1 avx2 smep bmi2 invpcid rdseed adx smap clflushopt xsaveopt xsavec xgetbv1 arat spec_ctrl intel_stibp flush_l1d arch_capabilities
+
+# cpu详细信息
+[root@node1 ~]# cat /proc/cpuinfo
+</code></pre>
+<h4 id="2-内存"><a href="#2-内存" class="headerlink" title="2. 内存"></a>2. 内存</h4><pre><code>[root@node1 ~]# free -h
+              total        used        free      shared  buff/cache   available
+Mem:           3.7G        530M        2.5G         19M        654M        2.9G
+Swap:            0B          0B          0B
+
+# 内存详细信息
+[root@node1 ~]# cat /proc/meminfo
+
+# 内存硬件信息
+[root@node1 ~]# dmidecode -t memory
+</code></pre>
+<h4 id="3-磁盘"><a href="#3-磁盘" class="headerlink" title="3. 磁盘"></a>3. 磁盘</h4><pre><code>[root@node1 ~]# lsblk
+NAME                                                                                             MAJ:MIN RM  SIZE RO TYPE MOUNTPOINT
+sda                                                                                                8:0    0   20G  0 disk
+├─sda1                                                                                             8:1    0    1G  0 part /boot
+└─sda2                                                                                             8:2    0   19G  0 part /
+
+# 磁盘分区等详细信息
+[root@node1 ~]# fdisk -l
+Disk /dev/sda: 21.5 GB, 21474836480 bytes, 41943040 sectors
+Units = sectors of 1 * 512 = 512 bytes
+Sector size (logical/physical): 512 bytes / 512 bytes
+I/O size (minimum/optimal): 512 bytes / 512 bytes
+Disk label type: dos
+Disk identifier: 0x000ad25b
+
+   Device Boot      Start         End      Blocks   Id  System
+/dev/sda1   *        2048     2099199     1048576   83  Linux
+/dev/sda2         2099200    41943039    19921920   83  Linux
+</code></pre>
+<h4 id="4-网卡"><a href="#4-网卡" class="headerlink" title="4. 网卡"></a>4. 网卡</h4><pre><code># 查看系统的所有网络接口
+[root@node1 ~]# ip a
+1: lo: &lt;LOOPBACK,UP,LOWER_UP&gt; mtu 65536 qdisc noqueue state UNKNOWN group default qlen 1000
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+    inet 127.0.0.1/8 scope host lo
+       valid_lft forever preferred_lft forever
+    inet6 ::1/128 scope host
+       valid_lft forever preferred_lft forever
+2: ens33: &lt;BROADCAST,MULTICAST,UP,LOWER_UP&gt; mtu 1500 qdisc pfifo_fast state UP group default qlen 1000
+    link/ether 00:0c:29:76:37:c3 brd ff:ff:ff:ff:ff:ff
+    inet 192.168.247.131/24 brd 192.168.247.255 scope global dynamic ens33
+       valid_lft 1585sec preferred_lft 1585sec
+    inet6 fe80::20c:29ff:fe76:37c3/64 scope link
+       valid_lft forever preferred_lft forever
+
+# 查看某个网络接口的详细信息
+[root@node1 ~]# ethtool ens33
+Settings for ens33:
+    Supported ports: [ TP ]
+    Supported link modes:   10baseT/Half 10baseT/Full
+                            100baseT/Half 100baseT/Full
+                            1000baseT/Full
+    Supported pause frame use: No
+    Supports auto-negotiation: Yes
+    Supported FEC modes: Not reported
+    Advertised link modes:  10baseT/Half 10baseT/Full
+                            100baseT/Half 100baseT/Full
+                            1000baseT/Full
+    Advertised pause frame use: No
+    Advertised auto-negotiation: Yes
+    Advertised FEC modes: Not reported
+    Speed: 1000Mb/s
+    Duplex: Full
+    Port: Twisted Pair
+    PHYAD: 0
+    Transceiver: internal
+    Auto-negotiation: on
+    MDI-X: off (auto)
+    Supports Wake-on: d
+    Wake-on: d
+    Current message level: 0x00000007 (7)
+                   drv probe link
+    Link detected: yes
+</code></pre>
+<h4 id="5-pci信息（主板所有硬件插槽信息）"><a href="#5-pci信息（主板所有硬件插槽信息）" class="headerlink" title="5. pci信息（主板所有硬件插槽信息）"></a>5. pci信息（主板所有硬件插槽信息）</h4><pre><code>[root@node1 ~]# lspci
+</code></pre>
+<h4 id="6-bios信息"><a href="#6-bios信息" class="headerlink" title="6. bios信息"></a>6. bios信息</h4><pre><code>[root@node1 ~]# dmidecode -t bios
+</code></pre>
+<blockquote>
+<p>想使用yum下载rpm包而不安装(yumdownloader)</p>
+</blockquote>
+<pre><code>1、先安装yum-utils
+yum install yum-utils -y
+
+2、下载指定rpm包
+yumdownloader tree
+
+3、依赖一起下载加 --resolve
+
+4、下载到指定目录加 --destdir=/opt/dir/
+</code></pre>
 
     </div>
 

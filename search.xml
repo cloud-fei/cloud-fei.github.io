@@ -1,6 +1,184 @@
 <?xml version="1.0" encoding="utf-8"?>
 <search>
   <entry>
+    <title>Linux查找/查看一些信息</title>
+    <url>/2023/06/27/Linux%E6%9F%A5%E6%89%BE-%E6%9F%A5%E7%9C%8B%E4%B8%80%E4%BA%9B%E4%BF%A1%E6%81%AF/</url>
+    <content><![CDATA[<h4 id="查找文件-x2F-服务"><a href="#查找文件-x2F-服务" class="headerlink" title="查找文件&#x2F;服务"></a>查找文件&#x2F;服务</h4><blockquote>
+<p>查找文件 <code>find</code></p>
+</blockquote>
+<pre><code>-name：按文件名来查找文件
+-prune：不在当前指定目录中查找
+
+# 查找 / 目录下所有名称为hosts的文件（可使用 * 模糊匹配）
+[root@node1 ~]# find / -name hosts
+/etc/hosts
+</code></pre>
+<span id="more"></span>
+
+<blockquote>
+<p>查找系统命令位置 <code>which</code></p>
+</blockquote>
+<pre><code>[root@node1 ~]# which echo
+/usr/bin/echo
+</code></pre>
+<blockquote>
+<p>查找命令是自带的还是外部安装的 <code>type</code></p>
+</blockquote>
+<pre><code>[root@node1 ~]# type cd
+cd is a shell builtin
+[root@node1 ~]# type ssh
+ssh is /usr/bin/ssh
+</code></pre>
+<blockquote>
+<p>查找端口号&#x2F;服务是否开启 <code>netstat</code> </p>
+</blockquote>
+<pre><code># 查找端口号对应的服务
+[root@node1 ~]# netstat -nlp | grep 22
+tcp        0      0 0.0.0.0:22              0.0.0.0:*               LISTEN      1125/sshd
+tcp6       0      0 :::22                   :::*                    LISTEN      1125/sshd
+unix  2      [ ACC ]     STREAM     LISTENING     635      227/@usr/sbin/plymo  @/org/freedesktop/plymouthd
+
+# 查找服务对应的端口号
+[root@node1 ~]# netstat -nlp | grep ssh
+tcp        0      0 0.0.0.0:22              0.0.0.0:*               LISTEN      1125/sshd
+tcp6       0      0 :::22                   :::*                    LISTEN      1125/sshd
+</code></pre>
+<blockquote>
+<p>系统服务查看 <code>systemctl list-unit-files</code></p>
+</blockquote>
+<pre><code># 查看系统是否有某个服务
+[root@node1 ~]# systemctl list-unit-files | grep ssh
+sshd-keygen.service                           static
+sshd.service                                  enabled
+sshd@.service                                 static
+sshd.socket                                   disabled
+</code></pre>
+<h4 id="查看硬件信息"><a href="#查看硬件信息" class="headerlink" title="查看硬件信息"></a>查看硬件信息</h4><h4 id="1-CPU"><a href="#1-CPU" class="headerlink" title="1. CPU"></a>1. CPU</h4><pre><code>[root@node1 ~]# lscpu
+Architecture:          x86_64                       # cpu架构
+CPU op-mode(s):        32-bit, 64-bit              
+Byte Order:            Little Endian
+CPU(s):                2                            # 共有2核
+On-line CPU(s) list:   0,1
+Thread(s) per core:    1                            # 每个cpu核只支持1个线程（不支持超线程）
+Core(s) per socket:    1                            # 每个cpu只有1个核
+Socket(s):             2                            # 共有两个核
+NUMA node(s):          1
+Vendor ID:             GenuineIntel                 # cpu产商 intel
+CPU family:            6
+Model:                 165
+Model name:            Intel(R) Core(TM) i7-10750H CPU @ 2.60GHz
+Stepping:              2
+CPU MHz:               2592.007
+BogoMIPS:              5184.01
+Hypervisor vendor:     VMware                       # 虚拟平台 
+Virtualization type:   full
+L1d cache:             32K
+L1i cache:             32K
+L2 cache:              256K
+L3 cache:              12288K
+NUMA node0 CPU(s):     0,1
+Flags:                 fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush mmx fxsr sse sse2 ss syscallnx pdpe1gb rdtscp lm constant_tsc arch_perfmon nopl xtopology tsc_reliable nonstop_tsc eagerfpu pni pclmulqdq ssse3 fma cx16 pcid sse4_1 sse4_2 x2apic movbe popcnt aes xsave avx f16c rdrand hypervisor lahf_lm abm 3dnowprefetch invpcid_single ssbd rsb_ctxsw ibrs ibpb stibp fsgsbase tsc_adjust bmi1 avx2 smep bmi2 invpcid rdseed adx smap clflushopt xsaveopt xsavec xgetbv1 arat spec_ctrl intel_stibp flush_l1d arch_capabilities
+
+# cpu详细信息
+[root@node1 ~]# cat /proc/cpuinfo
+</code></pre>
+<h4 id="2-内存"><a href="#2-内存" class="headerlink" title="2. 内存"></a>2. 内存</h4><pre><code>[root@node1 ~]# free -h
+              total        used        free      shared  buff/cache   available
+Mem:           3.7G        530M        2.5G         19M        654M        2.9G
+Swap:            0B          0B          0B
+
+# 内存详细信息
+[root@node1 ~]# cat /proc/meminfo
+
+# 内存硬件信息
+[root@node1 ~]# dmidecode -t memory
+</code></pre>
+<h4 id="3-磁盘"><a href="#3-磁盘" class="headerlink" title="3. 磁盘"></a>3. 磁盘</h4><pre><code>[root@node1 ~]# lsblk
+NAME                                                                                             MAJ:MIN RM  SIZE RO TYPE MOUNTPOINT
+sda                                                                                                8:0    0   20G  0 disk
+├─sda1                                                                                             8:1    0    1G  0 part /boot
+└─sda2                                                                                             8:2    0   19G  0 part /
+
+# 磁盘分区等详细信息
+[root@node1 ~]# fdisk -l
+Disk /dev/sda: 21.5 GB, 21474836480 bytes, 41943040 sectors
+Units = sectors of 1 * 512 = 512 bytes
+Sector size (logical/physical): 512 bytes / 512 bytes
+I/O size (minimum/optimal): 512 bytes / 512 bytes
+Disk label type: dos
+Disk identifier: 0x000ad25b
+
+   Device Boot      Start         End      Blocks   Id  System
+/dev/sda1   *        2048     2099199     1048576   83  Linux
+/dev/sda2         2099200    41943039    19921920   83  Linux
+</code></pre>
+<h4 id="4-网卡"><a href="#4-网卡" class="headerlink" title="4. 网卡"></a>4. 网卡</h4><pre><code># 查看系统的所有网络接口
+[root@node1 ~]# ip a
+1: lo: &lt;LOOPBACK,UP,LOWER_UP&gt; mtu 65536 qdisc noqueue state UNKNOWN group default qlen 1000
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+    inet 127.0.0.1/8 scope host lo
+       valid_lft forever preferred_lft forever
+    inet6 ::1/128 scope host
+       valid_lft forever preferred_lft forever
+2: ens33: &lt;BROADCAST,MULTICAST,UP,LOWER_UP&gt; mtu 1500 qdisc pfifo_fast state UP group default qlen 1000
+    link/ether 00:0c:29:76:37:c3 brd ff:ff:ff:ff:ff:ff
+    inet 192.168.247.131/24 brd 192.168.247.255 scope global dynamic ens33
+       valid_lft 1585sec preferred_lft 1585sec
+    inet6 fe80::20c:29ff:fe76:37c3/64 scope link
+       valid_lft forever preferred_lft forever
+
+# 查看某个网络接口的详细信息
+[root@node1 ~]# ethtool ens33
+Settings for ens33:
+    Supported ports: [ TP ]
+    Supported link modes:   10baseT/Half 10baseT/Full
+                            100baseT/Half 100baseT/Full
+                            1000baseT/Full
+    Supported pause frame use: No
+    Supports auto-negotiation: Yes
+    Supported FEC modes: Not reported
+    Advertised link modes:  10baseT/Half 10baseT/Full
+                            100baseT/Half 100baseT/Full
+                            1000baseT/Full
+    Advertised pause frame use: No
+    Advertised auto-negotiation: Yes
+    Advertised FEC modes: Not reported
+    Speed: 1000Mb/s
+    Duplex: Full
+    Port: Twisted Pair
+    PHYAD: 0
+    Transceiver: internal
+    Auto-negotiation: on
+    MDI-X: off (auto)
+    Supports Wake-on: d
+    Wake-on: d
+    Current message level: 0x00000007 (7)
+                   drv probe link
+    Link detected: yes
+</code></pre>
+<h4 id="5-pci信息（主板所有硬件插槽信息）"><a href="#5-pci信息（主板所有硬件插槽信息）" class="headerlink" title="5. pci信息（主板所有硬件插槽信息）"></a>5. pci信息（主板所有硬件插槽信息）</h4><pre><code>[root@node1 ~]# lspci
+</code></pre>
+<h4 id="6-bios信息"><a href="#6-bios信息" class="headerlink" title="6. bios信息"></a>6. bios信息</h4><pre><code>[root@node1 ~]# dmidecode -t bios
+</code></pre>
+<blockquote>
+<p>想使用yum下载rpm包而不安装(yumdownloader)</p>
+</blockquote>
+<pre><code>1、先安装yum-utils
+yum install yum-utils -y
+
+2、下载指定rpm包
+yumdownloader tree
+
+3、依赖一起下载加 --resolve
+
+4、下载到指定目录加 --destdir=/opt/dir/
+</code></pre>
+]]></content>
+      <tags>
+        <tag>linux</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>Linux网络流量问题排查-UDP丢包</title>
     <url>/2023/06/05/Linux%E7%BD%91%E7%BB%9C%E6%B5%81%E9%87%8F%E9%97%AE%E9%A2%98%E6%8E%92%E6%9F%A5-UDP%E4%B8%A2%E5%8C%85/</url>
     <content><![CDATA[<p><em>一直以来对Linux网络这部分了解比较少，解决问题总是没有条理</em></p>
