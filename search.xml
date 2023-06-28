@@ -337,6 +337,102 @@ ceph crash archive &lt;crash-id&gt;
 ]]></content>
   </entry>
   <entry>
+    <title>promethues + grafana 监测ceph集群状态</title>
+    <url>/2023/06/28/prometheus-grafana-%E7%9B%91%E6%B5%8Bceph%E9%9B%86%E7%BE%A4%E7%8A%B6%E6%80%81/</url>
+    <content><![CDATA[<h5 id="起因"><a href="#起因" class="headerlink" title="起因"></a>起因</h5><p>最近在使用海量小文件压测ceph集群，<strong>想要一个可视化的界面来方便监测ceph集群状态</strong>，由于很久之前使用过prometheus + grafana 监测 k8s 集群状态，想着用来监测 ceph 集群应该问题不大，那么就开始吧！</p>
+<p>首先了解下 <strong>prometheus 和 grafana 是什么</strong>？<br>通俗来讲，<strong>Prometheus 可以通过各种方式采集应用程序和系统的指标数据</strong>，例如服务器的 CPU 使用率、内存使用率、网络流量等等。采集到的数据会存储在一个时间序列数据库中，用户可以<span id="more"></span>使用PromQL查询语言进行查询和分析。同时，Prometheus 还提供了告警机制，可以在监控数据超出设定的阈值时发出告警通知。而** Grafana 可以通过连接 Prometheus 数据源，将采集到的数据进行可视化展示**，例如将 CPU 使用率和内存使用率用折线图的形式展示出来。用户可以通过配置仪表盘来自定义展示的数据和样式，以及添加告警规则和面板等。</p>
+<p><strong>Prometheus + Grafana 组合就是一套监控和可视化解决方案，可以帮助用户更好地监控和管理他们的应用程序、服务器和网络设备。</strong></p>
+<p>在 Ceph Luminous (12.x) 之前的版本，可以使用第三方的 ceph_exporter 采集 Ceph 集群的监控信息。 从 Ceph Luminous 12.2.1 版本开始，MGR 中自带了 Prometheus 插件，内置了 Prometheus Ceph Exporter，可以使用 Ceph MGR 内置的 exporter 作为 Prometheus 的 target。</p>
+<h4 id="一、启用-ceph-prometheus-模块"><a href="#一、启用-ceph-prometheus-模块" class="headerlink" title="一、启用 ceph prometheus 模块"></a>一、启用 ceph prometheus 模块</h4><p>任意一台ceph mgr节点执行</p>
+<pre><code>ceph mgr module enable prometheus
+</code></pre>
+<p>启用成功后可以看到</p>
+<pre><code>[root@node1 ~]# ceph mgr services
+&#123;
+    &quot;dashboard&quot;: &quot;https://node1:8443/&quot;,
+    &quot;prometheus&quot;: &quot;http://node1:9283/&quot;
+&#125;
+</code></pre>
+<p>其中 9283 是 ceph_exporter 的默认监听端口，访问 <code>http://&lt;MGR&gt;:9283/metrics</code> 可以获取到 metrics</p>
+<p><img src="/../img/prometheus_grafana/prometheus1.png" alt="image"></p>
+<h4 id="二、安装-prometheus-server"><a href="#二、安装-prometheus-server" class="headerlink" title="二、安装 prometheus server"></a>二、安装 prometheus server</h4><h5 id="1、二进制安装"><a href="#1、二进制安装" class="headerlink" title="1、二进制安装"></a>1、二进制安装</h5><p>Prometheus 基于 Golang 编写，编译后的软件包，不依赖于任何的第三方依赖。所以只需要下载对应平台的二进制包，解压并且添加基本的配置即可正常启动 Prometheus Server。</p>
+<p>下载地址：<a href="https://prometheus.io/download/">https://prometheus.io/download/</a></p>
+<p>解压并且移动到 &#x2F;opt&#x2F; 目录</p>
+<pre><code>[root@node1 ~]# tar zxvf prometheus-2.45.0.linux-amd64.tar.gz
+[root@node1 ~]# mv prometheus-2.45.0.linux-amd64 /opt/prometheus/
+[root@node1 ~]# cd /opt/prometheus/
+</code></pre>
+<h5 id="2、将-prometheus-配置为系统服务进行管理"><a href="#2、将-prometheus-配置为系统服务进行管理" class="headerlink" title="2、将 prometheus 配置为系统服务进行管理"></a>2、将 prometheus 配置为系统服务进行管理</h5><pre><code>cat &gt; /usr/lib/systemd/system/prometheus.service &lt;&lt; EOF
+[Unit]
+Description=prometheus
+[Service]
+ExecStart=/opt/prometheus/prometheus --config.file=/opt/prometheus/prometheus.yml --storage.tsdb.path=/opt/prometheus/data/ --web.enable-lifecycle
+ExecReload=/bin/kill -HUP \$MAINPID
+KillMode=process
+Restart=on-failure
+[Install]
+WantedBy=multi-user.target
+EOF
+</code></pre>
+<h5 id="3、启动服务"><a href="#3、启动服务" class="headerlink" title="3、启动服务"></a>3、启动服务</h5><pre><code>systemctl daemon-reload
+systemctl start prometheus
+systemctl enable prometheus
+</code></pre>
+<p>出现关键信息<code>Server is ready to receive web requests.</code> 则启动成功，此时可以通过 <code>http://&lt;IP&gt;:9090</code> 访问 Prometheus 的 UI 界面</p>
+<p><img src="/../img/prometheus_grafana/prometheus2.png" alt="image"></p>
+<h5 id="4、配置-prometheus-数据源"><a href="#4、配置-prometheus-数据源" class="headerlink" title="4、配置 prometheus 数据源"></a>4、配置 prometheus 数据源</h5><p>为了让 Prometheus Server 能够从 Ceph Exporter 获取到监控数据，需要修改 Prometheus 配置文件。编辑 prometheus.yml 并在 scrape_configs 节点下添加以下内容:</p>
+<pre><code>[root@node1 ~]# vim /opt/prometheus/prometheus.yml
+...
+  - job_name: &quot;Ceph&quot;
+    static_configs:
+      - targets: [&quot;&lt;IP&gt;:9283&quot;]
+</code></pre>
+<p>重新加载 <code>systemctl reload prometheus</code>,再次访问 <code>http://&lt;IP&gt;:9090</code>，选择<code>Status -&gt; Targets</code>，此时可以成功获取到 prometheus 数据源</p>
+<p><img src="/../img/prometheus_grafana/prometheus3.png" alt="image"></p>
+<h4 id="三、安装-grafana"><a href="#三、安装-grafana" class="headerlink" title="三、安装 grafana"></a>三、安装 grafana</h4><h5 id="1、二进制安装-1"><a href="#1、二进制安装-1" class="headerlink" title="1、二进制安装"></a>1、二进制安装</h5><p>下载地址：<a href="https://grafana.com/grafana/download">https://grafana.com/grafana/download</a></p>
+<p>解压并且移动到 &#x2F;opt&#x2F; 目录</p>
+<pre><code>[root@node1 ~]# tar zxvf grafana-enterprise-8.0.5.linux-amd64.tar.gz
+[root@node1 ~]# mv grafana-8.0.5/ /opt/grafana/
+[root@node1 ~]# cd /opt/grafana/
+</code></pre>
+<h4 id="2、将-grafana-配置为系统服务进行管理"><a href="#2、将-grafana-配置为系统服务进行管理" class="headerlink" title="2、将 grafana 配置为系统服务进行管理"></a>2、将 grafana 配置为系统服务进行管理</h4><pre><code>cat &gt; /usr/lib/systemd/system/grafana.service &lt;&lt; EOF
+[Unit]
+Description=grafana
+[Service]
+ExecStart=/opt/grafana/bin/grafana-server -homepath=/opt/grafana
+ExecReload=/bin/kill -HUP $MAINPID
+KillMode=process
+Restart=on-failure
+[Install]
+WantedBy=multi-user.target
+EOF
+</code></pre>
+<h5 id="3、启动-grafana-服务"><a href="#3、启动-grafana-服务" class="headerlink" title="3、启动 grafana 服务"></a>3、启动 grafana 服务</h5><pre><code>systemctl daemon-reload
+systemctl start grafana
+systemctl enable grafana
+</code></pre>
+<p>启动成功后可通过<code>http://&lt;IP&gt;:3000</code> 进入到 Grafana UI，默认情况下使用账户 admin&#x2F;admin 进行登录（首次登录会要求修改默认密码）。点击 “Add your first data source” 添加数据源</p>
+<p><img src="/../img/prometheus_grafana/grafana1.png" alt="image"></p>
+<p>选择 “Prometheus”，点击右侧的 “Select”</p>
+<p><img src="/../img/prometheus_grafana/grafana2.png" alt="image"></p>
+<p>“URL” 填写 Prometheus 的访问地址，滑到最下方点击 “Save &amp; test” 完成添加，配置正确的情况下会提示 “Data source is working” 的信息。</p>
+<p><img src="/../img/prometheus_grafana/grafana3.png" alt="image"></p>
+<p>完成数据源的添加之后就可以在 Grafana 中创建可视化 Dashboard 了，选择左侧 <code>Dashboards -&gt; Manage</code>，点击 <code>Import</code>,输入 Dashboard 模板编号 2842，点击 <code>Load</code>,给 Dashboard 配置个名称，选择数据源为 <code>Prometheus</code>，最后点击 <code>Import</code></p>
+<p><img src="/../img/prometheus_grafana/grafana4.png" alt="image"></p>
+<h4 id="部署中遇到的几个小问题："><a href="#部署中遇到的几个小问题：" class="headerlink" title="部署中遇到的几个小问题："></a>部署中遇到的几个小问题：</h4><p>1、由于服务器是局域网，时间服务器设置问题，导致 prometheus 对接数据源的时候会有警告<code>Warning: Error fetching server time: Detected 229.88299989700317 seconds time difference between your browser and the server. Prometheus relies on accurate time and time drift might cause unexpected query results.</code></p>
+<p>先选择了笨办法手动改一下时间</p>
+<pre><code>date -s &quot;2023-06-28 11:41:00&quot;
+hwclock --systohc
+</code></pre>
+<p>2、添加 dashboard 模板时，输入模板编号提示<code>Bad Gateway</code>,此时可以去<a href="https://grafana.com/grafana/dashboards/">grafana dashboards官网</a>自行下载json文件然后<code>Upload JSON file</code></p>
+<p><img src="/../img/prometheus_grafana/grafana5.png" alt="image"></p>
+<h4 id="写在最后"><a href="#写在最后" class="headerlink" title="写在最后"></a>写在最后</h4><p>文章主要参考自 <a href="https://www.koenli.com/af5b9d4e.html">使用 Prometheus+Grafana 监控 Ceph</a>，在此基础上根据自身环境所撰写，如有侵权请联系删除！</p>
+]]></content>
+      <tags>
+        <tag>linux ceph</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>vdbench-磁盘性能测试工具.md</title>
     <url>/2023/06/13/vdbench-%E7%A3%81%E7%9B%98%E6%80%A7%E8%83%BD%E6%B5%8B%E8%AF%95%E5%B7%A5%E5%85%B7-md/</url>
     <content><![CDATA[<p>vdbench 是一个 I&#x2F;O 测试工具，可以用来测试磁盘和文件系统读写性能</p>
