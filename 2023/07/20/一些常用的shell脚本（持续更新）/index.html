@@ -5,7 +5,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>cloud-fei || linux ceph</title>
+    <title>cloud-fei || 一些常用的shell脚本（持续更新）</title>
     <meta name="author" content="cloud-fei">
     <meta name="description" content=" ">
     <meta name="keywords" content=" ">
@@ -150,93 +150,97 @@
 
                 <div id="main">
                      
-<div class="categories-tags">
-    
-    <div class="all-s">
-        
-        
-        <span>
-            <a href="/tags/linux/" style=background:#879cff>
-                <span class="icon">
-                    <a-icon type="tag" theme="filled" />
-                </span>
-                linux
-            </a>
-        </span>
-        
-        
-        
-        <span>
-            <a href="/tags/ceph/" style=background:#879cff>
-                <span class="icon">
-                    <a-icon type="tag" theme="filled" />
-                </span>
-                ceph
-            </a>
-        </span>
-        
-        
-        
-        <span>
-            <a href="/tags/linux-ceph/" style='background:linear-gradient(to right, #fbc2eb 0%, #bbd4ff 100%)'>
-                <span class="icon">
-                    <a-icon type="tag" theme="filled" />
-                </span>
-                linux ceph
-            </a>
-        </span>
-        
-        
-        
-        <span>
-            <a href="/tags/ceph-linux/" style=background:#ff7d73>
-                <span class="icon">
-                    <a-icon type="tag" theme="filled" />
-                </span>
-                ceph linux
-            </a>
-        </span>
-        
-        
+<link rel="stylesheet" href="/css/post-body.css">
+<div class="article">
+    <div>
+        <h1>一些常用的shell脚本（持续更新） </h1>
     </div>
-    <div id="archives">
-        
-        <a-timeline>
-            <a-timeline-item color="#a5c2f5">
-                <a-card hoverable>
-                    <div class="item-time">2023/6/28</div>
-                    <a href="/2023/06/28/prometheus-grafana-监测ceph集群状态/">
-                        <h3>promethues + grafana 监测ceph集群状态</h3>
-                    </a>
-                    <div class="info">
-                        
+    <div class="info">
+        <span class="date">
+            <span class="icon">
+                <a-icon type="calendar" theme="filled" />
+            </span>
+            2023/7/20
+        </span>
 
-                        
-                        <span class="tags">
-                            <span class="icon">
-                                <a-icon type="tags" theme="filled" />
-                            </span>
-                            
-                            <span class="tag">
-                                
-                                <a href="/tags/linux-ceph" style=color:#1bccbc>
-                                    linux ceph
-                                </a>
-                            </span>
-                            
-                        </span>
-                        
-                    </div>
-                </a-card>
-            </a-timeline-item>
-        </a-timeline>
+        
+
+        
+
+        <span class="tags">
+            <span class="icon">
+                <a-icon type="tags" theme="filled" />
+            </span>
+            
+            <span class="tag">
+                
+                <a href="/tags/linux" style=color:#879cff>
+                    linux
+                </a>
+            </span>
+            
+        </span>
         
     </div>
-    <script>
-        new Vue({
-            el: '#archives'
-        })
-    </script>
+
+    <div class="content" v-pre>
+        <p>忘性大，记录一些可能会重复使用到的一些 shell 函数或语句。</p>
+<ul>
+<li>校验IP地址是否符合规范</li>
+</ul>
+<span id="more"></span>
+<pre><code>function validate_ip_address &#123;
+  local ip_address=$1
+
+  # 使用正则表达式校验IP地址格式是否符合规范
+  if [[ $ip_address =~ ^([0-9]&#123;1,3&#125;\.)&#123;3&#125;[0-9]&#123;1,3&#125;$ ]]; then
+    # 对IP地址进行拆分
+    IFS=&#39;.&#39; read -r -a ip_parts &lt;&lt;&lt; &quot;$ip_address&quot;
+
+    # 判断每个数字是否在0-255之间
+    valid_ip=true
+    for ip_part in &quot;$&#123;ip_parts[@]&#125;&quot;; do
+      if (( $ip_part &lt; 0 || $ip_part &gt; 255 )); then
+        valid_ip=false
+        break
+      fi
+    done
+
+    # 输出结果
+    if [ $valid_ip == true ]; then
+      echo &quot;IP地址 $ip_address 符合规范。&quot;
+      return 0 # 返回0表示IP地址符合规范
+    else
+      echo &quot;IP地址 $ip_address 不符合规范。&quot;
+      return 1 # 返回1表示IP地址不符合规范
+    fi
+  else
+    echo &quot;IP地址 $ip_address 不符合规范。&quot;
+    return 1 # 返回1表示IP地址不符合规范
+  fi
+&#125;
+
+#ip不符合规范则退出
+validate_ip_address $ip
+if [ $? != 0 ]; then
+  exit 1
+fi
+</code></pre>
+<ul>
+<li>判断变量是否为空</li>
+</ul>
+<pre><code>if [ ! -n &quot;$ip&quot; ]
+then
+  echo &quot;IP为空&quot;
+  exit 1
+else
+  echo &quot;IP不为空&quot;
+fi
+</code></pre>
+
+    </div>
+
+    
 </div>
                      
 <footer id="footer">
